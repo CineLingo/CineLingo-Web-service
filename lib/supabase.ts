@@ -1,9 +1,22 @@
 import { createBrowserClient } from "@supabase/ssr";
 
+// Supabase upload response type (storage upload)
+type SupabaseUploadResponse = {
+  filePath: string;
+  publicUrl: string;
+  error?: string;
+};
+
+// Supabase delete response type
+type SupabaseDeleteResponse = {
+  success: boolean;
+  error?: string;
+};
+
 export function createClient() {
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 }
 
@@ -19,40 +32,40 @@ export const supabase = createClient();
 export async function uploadAudioFile(
   file: File,
   fileName?: string
-): Promise<{ filePath: string; publicUrl: string; error?: any }> {
+): Promise<SupabaseUploadResponse> {
   try {
     const client = createClient();
-    const bucketName = 'prototype';
-    
+    const bucketName = "prototype";
+
     // Generate unique filename if not provided
     const finalFileName = fileName || `${Date.now()}-${file.name}`;
-    
+
     // Upload file to Supabase Storage
-    const { data, error } = await client.storage
+    const uploadResult = await client.storage
       .from(bucketName)
       .upload(finalFileName, file, {
-        cacheControl: '3600',
+        cacheControl: "3600",
         upsert: false
       });
 
-    if (error) {
-      return { filePath: '', publicUrl: '', error };
+    if (uploadResult.error) {
+      return { filePath: '', publicUrl: '', error: uploadResult.error.message };
     }
 
     // Get public URL for the uploaded file
-    const { data: urlData } = client.storage
+    const publicUrlData = client.storage
       .from(bucketName)
       .getPublicUrl(finalFileName);
 
     return {
       filePath: finalFileName,
-      publicUrl: urlData.publicUrl,
+      publicUrl: publicUrlData.data.publicUrl
     };
   } catch (error) {
     return {
-      filePath: '',
-      publicUrl: '',
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
+      filePath: "",
+      publicUrl: "",
+      error: error instanceof Error ? error.message : "Unknown error occurred"
     };
   }
 }
@@ -64,24 +77,24 @@ export async function uploadAudioFile(
  */
 export async function deleteAudioFile(
   fileName: string
-): Promise<{ success: boolean; error?: any }> {
+): Promise<SupabaseDeleteResponse> {
   try {
     const client = createClient();
-    const bucketName = 'prototype';
-    
-    const { error } = await client.storage
+    const bucketName = "prototype";
+
+    const deleteResult = await client.storage
       .from(bucketName)
       .remove([fileName]);
 
-    if (error) {
-      return { success: false, error };
+    if (deleteResult.error) {
+      return { success: false, error: deleteResult.error.message };
     }
 
     return { success: true };
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
+      error: error instanceof Error ? error.message : "Unknown error occurred"
     };
   }
-} 
+}

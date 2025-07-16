@@ -4,9 +4,16 @@ import React, { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Download } from 'lucide-react'
 
+type TTSRequestRow = {
+  reference_audio_url: string | null
+  gen_text: string
+  status: 'success' | 'fail' | string
+  generated_audio_url: string | null
+}
+
 export default function TTSResultPage() {
   const [userId, setUserId] = useState<string | null>(null)
-  const [rows, setRows] = useState<any[]>([])
+  const [rows, setRows] = useState<TTSRequestRow[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
@@ -23,13 +30,12 @@ export default function TTSResultPage() {
   useEffect(() => {
     if (!userId) return
     const fetchRows = async () => {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('tts_requests')
         .select('reference_audio_url, gen_text, status, generated_audio_url')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-      
-      setRows(data || [])
+      setRows((data as TTSRequestRow[]) || [])
       setLoading(false)
     }
     fetchRows()
@@ -60,7 +66,6 @@ export default function TTSResultPage() {
   return (
     <div className="max-w-3xl mx-auto mt-8">
       <h1 className="text-2xl font-bold mb-6 text-gray-900 dark:text-gray-100">나의 TTS 요청 결과</h1>
-      
       <table className="w-full border-collapse rounded-lg overflow-hidden shadow">
         <thead>
           <tr className="bg-gray-200 dark:bg-gray-800">
