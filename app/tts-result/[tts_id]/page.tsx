@@ -8,7 +8,9 @@ type TTSRequestRow = {
   reference_audio_url: string | null
   gen_text: string
   status: 'success' | 'fail' | string
-  generated_audio_url: string | null
+
+  public_url: string | null
+
 }
 
 export default function TTSResultPage() {
@@ -32,7 +34,7 @@ export default function TTSResultPage() {
     const fetchRows = async () => {
       const { data } = await supabase
         .from('tts_requests')
-        .select('reference_audio_url, gen_text, status, generated_audio_url')
+        .select('reference_audio_url, gen_text, status, public_url')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
       setRows((data as TTSRequestRow[]) || [])
@@ -98,11 +100,12 @@ export default function TTSResultPage() {
                 </span>
               </td>
               <td className="p-3">
-                {row.generated_audio_url ? (
+                {row.public_url ? (
                   <div className="flex items-center gap-2">
-                    <audio controls src={row.generated_audio_url} className="w-40" />
+                    <audio controls src={row.public_url} className="w-40" />
                     <button
-                      onClick={() => handleDownload(row.generated_audio_url!, `tts-generated-${i + 1}.mp3`)}
+                      onClick={() => handleDownload(row.public_url!, `tts-generated-${i + 1}.mp3`)}
+
                       className="inline-flex items-center gap-1 px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded transition-colors"
                       title="음성 파일 다운로드"
                     >
