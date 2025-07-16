@@ -102,7 +102,7 @@ export default function TTSResultPage() {
                   <div className="flex items-center gap-2">
                     <audio controls src={row.generated_audio_url} className="w-40" />
                     <button
-                      onClick={() => handleDownload(row.generated_audio_url, `tts-generated-${i + 1}.mp3`)}
+                      onClick={() => handleDownload(row.generated_audio_url!, `tts-generated-${i + 1}.mp3`)}
                       className="inline-flex items-center gap-1 px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded transition-colors"
                       title="음성 파일 다운로드"
                     >
