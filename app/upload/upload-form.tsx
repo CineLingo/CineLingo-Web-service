@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useSupabaseUpload } from '@/hooks/use-supabase-upload'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Play, Pause, Mic, Square, RotateCcw, Music, Upload } from 'lucide-react'
+import { Play, Pause, Mic, Square, RotateCcw, Music } from 'lucide-react'
 
 // 미리 업로드된 오디오 파일 목록
 const PRESET_AUDIO_FILES = [
