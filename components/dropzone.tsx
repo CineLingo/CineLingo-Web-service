@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { CheckCircle, File, Loader2, Upload, X } from 'lucide-react'
 import { createContext, type PropsWithChildren, useCallback, useContext } from 'react'
 import Image from 'next/image'
+import { FileAudio } from 'lucide-react'
 
 
 export const formatBytes = (
@@ -87,11 +88,9 @@ const DropzoneContent = ({ className }: { className?: string }) => {
 
   if (isSuccess) {
     return (
-      <div className={cn('flex flex-row items-center gap-x-2 justify-center', className)}>
-        <CheckCircle size={16} className="text-primary" />
-        <p className="text-primary text-sm">
-          Successfully uploaded {files.length} file{files.length > 1 ? 's' : ''}
-        </p>
+      <div className={cn('flex items-center justify-center gap-2', className)}>
+        <CheckCircle size={16} className="text-green-400" />
+        <p className="text-sm text-green-400">업로드 완료</p>
       </div>
     )
   }
@@ -105,69 +104,45 @@ const DropzoneContent = ({ className }: { className?: string }) => {
         return (
           <div
             key={`${file.name}-${idx}`}
-            className="flex items-center gap-x-4 border-b py-2 first:mt-4 last:mb-4 "
+            className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg border border-gray-700"
           >
-            {file.type.startsWith('image/') ? (
-              <div className="h-10 w-10 rounded border overflow-hidden shrink-0 bg-muted flex items-center justify-center">
-                <Image
-                  src={file.preview!}
-                  alt={file.name}
-                  className="object-cover"
-                  width={40}    // className 기준
-                  height={40}
-                />
-              </div>
-            ) : (
-              <div className="h-10 w-10 rounded border bg-muted flex items-center justify-center">
-                <File size={18} />
-              </div>
-            )}
+            <div className="w-8 h-8 bg-gray-700 rounded flex items-center justify-center">
+              <FileAudio size={16} className="text-gray-400" />
+            </div>
 
-            <div className="shrink grow flex flex-col items-start truncate">
-              <p title={file.name} className="text-sm truncate max-w-full">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-200 truncate">
                 {file.name}
               </p>
               {file.errors.length > 0 ? (
-                <p className="text-xs text-destructive">
-                  {file.errors
-                    .map((e) =>
-                      e.message.startsWith('File is larger than')
-                        ? `File is larger than ${formatBytes(maxFileSize, 2)} (Size: ${formatBytes(file.size, 2)})`
-                        : e.message
-                    )
-                    .join(', ')}
-                </p>
+                <p className="text-xs text-red-400">파일 크기가 너무 큽니다</p>
               ) : loading && !isSuccessfullyUploaded ? (
-                <p className="text-xs text-muted-foreground">Uploading file...</p>
+                <p className="text-xs text-gray-400">업로드 중...</p>
               ) : !!fileError ? (
-                <p className="text-xs text-destructive">Failed to upload: {fileError.message}</p>
+                <p className="text-xs text-red-400">업로드 실패</p>
               ) : isSuccessfullyUploaded ? (
-                <p className="text-xs text-primary">Successfully uploaded file</p>
+                <p className="text-xs text-green-400">업로드 완료</p>
               ) : (
-                <p className="text-xs text-muted-foreground">{formatBytes(file.size, 2)}</p>
+                <p className="text-xs text-gray-400">{formatBytes(file.size, 2)}</p>
               )}
             </div>
 
             {!loading && !isSuccessfullyUploaded && (
-              <Button
-                size="icon"
-                variant="link"
-                className="shrink-0 justify-self-end text-muted-foreground hover:text-foreground"
+              <button
                 onClick={() => handleRemoveFile(file.name)}
+                className="text-gray-500 hover:text-gray-300 transition-colors"
               >
-                <X />
-              </Button>
+                <X size={16} />
+              </button>
             )}
           </div>
         )
       })}
       {exceedMaxFiles && (
-        <p className="text-sm text-left mt-2 text-destructive">
-          You may upload only up to {maxFiles} files, please remove {files.length - maxFiles} file
-          {files.length - maxFiles > 1 ? 's' : ''}.
+        <p className="text-sm text-red-400 mt-2">
+          최대 {maxFiles}개 파일만 업로드 가능합니다
         </p>
       )}
-      {/* 자동 업로드 버튼 제거 - 사용자가 명시적으로 제출 버튼을 클릭하도록 함 */}
     </div>
   )
 }
@@ -180,28 +155,22 @@ const DropzoneEmptyState = ({ className }: { className?: string }) => {
   }
 
   return (
-    <div className={cn('flex flex-col items-center gap-y-2', className)}>
-      <Upload size={20} className="text-muted-foreground" />
-      <p className="text-sm">
-        Upload{!!maxFiles && maxFiles > 1 ? ` ${maxFiles}` : ''} file
-        {!maxFiles || maxFiles > 1 ? 's' : ''}
-      </p>
-      <div className="flex flex-col items-center gap-y-1">
-        <p className="text-xs text-muted-foreground">
-          Drag and drop or{' '}
+    <div className={cn('flex flex-col items-center gap-y-3', className)}>
+      <div className="w-12 h-12 bg-gray-800 rounded-full flex items-center justify-center">
+        <Upload size={20} className="text-gray-400" />
+      </div>
+      <div className="text-center">
+        <p className="text-sm font-medium text-gray-200">오디오 파일 업로드</p>
+        <p className="text-xs text-gray-400 mt-1">
+          파일을 드래그하거나{' '}
           <a
             onClick={() => inputRef.current?.click()}
-            className="underline cursor-pointer transition hover:text-foreground"
+            className="text-blue-400 underline cursor-pointer hover:text-blue-300"
           >
-            select {maxFiles === 1 ? `file` : 'files'}
-          </a>{' '}
-          to upload
+            선택
+          </a>
+          하세요
         </p>
-        {maxFileSize !== Number.POSITIVE_INFINITY && (
-          <p className="text-xs text-muted-foreground">
-            Maximum file size: {formatBytes(maxFileSize, 2)}
-          </p>
-        )}
       </div>
     </div>
   )

@@ -17,7 +17,7 @@ export function GoogleAuthButton() {
   };
 
   return (
-    <Button variant="outline" className="w-full" onClick={handleSignIn}>
+    <Button variant="outline" className="w-full border-blue-200 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 text-blue-700 dark:text-blue-300 dark:border-blue-700 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 transition-all duration-300" onClick={handleSignIn}>
       <FcGoogle className="mr-2 h-4 w-4" />
       Continue with Google
     </Button>

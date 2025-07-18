@@ -9,8 +9,23 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Next.js and Supabase Starter Kit",
-  description: "The fastest way to build apps with Next.js and Supabase",
+  title: "Cinelingo Custom TTS Web",
+  description: "Custom Text-to-Speech web application - Upload reference audio and generate TTS with your own voice",
+  keywords: ["TTS", "Text-to-Speech", "Custom Voice", "Audio Generation", "Cinelingo"],
+  authors: [{ name: "Cinelingo" }],
+  creator: "Cinelingo",
+  publisher: "Cinelingo",
+  openGraph: {
+    title: "Cinelingo Custom TTS Web",
+    description: "Custom Text-to-Speech web application - Upload reference audio and generate TTS with your own voice",
+    type: "website",
+    url: defaultUrl,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Cinelingo Custom TTS Web",
+    description: "Custom Text-to-Speech web application - Upload reference audio and generate TTS with your own voice",
+  },
 };
 
 const geistSans = Geist({

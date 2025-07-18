@@ -6,7 +6,7 @@ import { useSupabaseUpload } from '@/hooks/use-supabase-upload'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Play, Pause, Volume2, Mic, Square, RotateCcw } from 'lucide-react'
+import { Play, Pause, Volume2, Mic, Square, RotateCcw, Upload, FileAudio } from 'lucide-react'
 
 const FileUploadDemo = () => {
   const [userId, setUserId] = useState<string | null>(null)
@@ -19,6 +19,10 @@ const FileUploadDemo = () => {
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null)
   const audioUrlRef = useRef<string | null>(null)
   
+  // 오디오 진행률 관련 상태
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  
   // 녹음 관련 상태
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
@@ -26,6 +30,9 @@ const FileUploadDemo = () => {
   const [audioChunks, setAudioChunks] = useState<Blob[]>([])
   const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null)
   const [recordingTimer, setRecordingTimer] = useState<NodeJS.Timeout | null>(null)
+  
+  // 현재 단계 관리
+  const [currentStep, setCurrentStep] = useState<'upload' | 'preview' | 'text'>('upload')
   
   const supabase = createClient()
   const router = useRouter()
@@ -65,15 +72,32 @@ const FileUploadDemo = () => {
       const handleEnded = () => setIsPlaying(false)
       const handlePlay = () => setIsPlaying(true)
       const handlePause = () => setIsPlaying(false)
+      const handleTimeUpdate = () => setCurrentTime(audioElement.currentTime)
+      const handleLoadedMetadata = () => {
+        if (audioElement.duration && !isNaN(audioElement.duration)) {
+          setDuration(audioElement.duration)
+        }
+      }
+      const handleError = () => {
+        console.error('오디오 로딩 실패')
+        setDuration(0)
+        setCurrentTime(0)
+      }
 
       audioElement.addEventListener('ended', handleEnded)
       audioElement.addEventListener('play', handlePlay)
       audioElement.addEventListener('pause', handlePause)
+      audioElement.addEventListener('timeupdate', handleTimeUpdate)
+      audioElement.addEventListener('loadedmetadata', handleLoadedMetadata)
+      audioElement.addEventListener('error', handleError)
 
       return () => {
         audioElement.removeEventListener('ended', handleEnded)
         audioElement.removeEventListener('play', handlePlay)
         audioElement.removeEventListener('pause', handlePause)
+        audioElement.removeEventListener('timeupdate', handleTimeUpdate)
+        audioElement.removeEventListener('loadedmetadata', handleLoadedMetadata)
+        audioElement.removeEventListener('error', handleError)
       }
     }
   }, [audioElement])
@@ -85,11 +109,14 @@ const FileUploadDemo = () => {
       const url = URL.createObjectURL(file)
       setAudioUrl(url)
       setShowPreview(true)
+      setCurrentStep('preview')
       
       // 새로운 오디오 엘리먼트 생성
       const audio = new Audio(url)
       setAudioElement(audio)
       setIsPlaying(false)
+      setCurrentTime(0)
+      setDuration(0)
     }
   }, [])
 
@@ -102,6 +129,7 @@ const FileUploadDemo = () => {
     }
     setAudioElement(null)
     setIsPlaying(false)
+    setCurrentStep('upload')
   }, [])
 
   // 컴포넌트 언마운트 시 URL 정리
@@ -137,6 +165,7 @@ const FileUploadDemo = () => {
         const blob = new Blob(chunks, { type: 'audio/webm' })
         setRecordedAudioBlob(blob)
         setAudioChunks(chunks)
+        setCurrentStep('preview')
         
         // 스트림 정리
         stream.getTracks().forEach(track => track.stop())
@@ -155,7 +184,7 @@ const FileUploadDemo = () => {
       
     } catch (error) {
       console.error('녹음을 시작할 수 없습니다:', error)
-      setErrorMessage('마이크 권한이 필요합니다. 브라우저 설정을 확인해주세요.')
+      setErrorMessage('마이크 권한이 필요합니다.')
     }
   }, [])
 
@@ -185,6 +214,7 @@ const FileUploadDemo = () => {
     }
     setAudioElement(null)
     setIsPlaying(false)
+    setCurrentStep('upload')
   }, [])
 
   // 녹음된 오디오를 파일로 변환하고 미리보기 설정
@@ -198,6 +228,8 @@ const FileUploadDemo = () => {
       const audio = new Audio(url)
       setAudioElement(audio)
       setIsPlaying(false)
+      setCurrentTime(0)
+      setDuration(0)
     }
   }, [recordedAudioBlob])
 
@@ -350,8 +382,8 @@ const FileUploadDemo = () => {
           .eq('tts_id', insertData.tts_id)
       }
 
-      // 3단계: 결과 확인 페이지로 이동
-      router.push(`/tts-result/${insertData.tts_id}`)
+      // 3단계: 결과 목록 페이지로 이동
+      router.push(`/user/results`)
     },
     [userId, gen_text, supabase, router]
   )
@@ -470,8 +502,8 @@ const FileUploadDemo = () => {
           .eq('tts_id', insertData.tts_id)
       }
 
-      // 5단계: 결과 확인 페이지로 이동
-      router.push(`/tts-result/${insertData.tts_id}`)
+      // 5단계: 결과 목록 페이지로 이동
+      router.push(`/user/results`)
       
     } catch (error) {
       console.error('녹음 오디오 TTS 처리 중 오류:', error)
@@ -528,175 +560,234 @@ const FileUploadDemo = () => {
     }
   }, [props.files, handleFileSelect, clearAudioPreview])
 
+  // 텍스트 입력 완료 시 다음 단계로
+  const handleTextSubmit = () => {
+    if (gen_text.trim()) {
+      setCurrentStep('text')
+    }
+  }
+
+  // 시간 포맷 함수
+  const formatTime = (seconds: number) => {
+    if (isNaN(seconds) || seconds === Infinity) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // 진행률 바 클릭 핸들러
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!audioElement || duration === 0) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percentage = (clickX / rect.width) * 100;
+    const newTime = (percentage / 100) * duration;
+    
+    audioElement.currentTime = newTime;
+    setCurrentTime(newTime);
+  };
+
   return (
-    <div className="w-[500px]">
+    <div className="w-full max-w-md mx-auto">
       {userId ? (
-        <>
-          <input
-            type="text"
-            placeholder="변환할 텍스트를 입력하세요"
-            value={gen_text}
-            onChange={(e) => setGenText(e.target.value)}
-            className="mb-4 w-full border border-gray-300 rounded px-2 py-1"
-          />
-          
+        <div className="space-y-6">
+          {/* 단계 표시 */}
+          <div className="flex items-center justify-center space-x-8 mb-8">
+            <div className={`flex items-center space-x-2 ${currentStep === 'upload' ? 'text-blue-400' : 'text-gray-500'}`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
+                currentStep === 'upload' ? 'bg-blue-500 text-white' : 'bg-gray-700 text-gray-400'
+              }`}>
+                1
+              </div>
+              <span className="text-sm font-medium">업로드</span>
+            </div>
+            <div className={`flex items-center space-x-2 ${currentStep === 'preview' ? 'text-blue-400' : 'text-gray-500'}`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
+                currentStep === 'preview' ? 'bg-blue-500 text-white' : 'bg-gray-700 text-gray-400'
+              }`}>
+                2
+              </div>
+              <span className="text-sm font-medium">미리듣기</span>
+            </div>
+            <div className={`flex items-center space-x-2 ${currentStep === 'text' ? 'text-blue-400' : 'text-gray-500'}`}>
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
+                currentStep === 'text' ? 'bg-blue-500 text-white' : 'bg-gray-700 text-gray-400'
+              }`}>
+                3
+              </div>
+              <span className="text-sm font-medium">텍스트</span>
+            </div>
+          </div>
+
           {errorMessage && (
-            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+            <div className="p-3 bg-red-900/50 border border-red-700 text-red-300 rounded-lg text-sm">
               {errorMessage}
             </div>
           )}
           
           {isProcessing && (
-            <div className="mb-4 p-3 bg-blue-100 border border-blue-400 text-blue-700 rounded">
+            <div className="p-3 bg-blue-900/50 border border-blue-700 text-blue-300 rounded-lg text-sm">
               TTS 처리를 시작하고 있습니다...
             </div>
           )}
 
-          {/* 녹음 섹션 */}
-          <div className="mb-6 p-4 border border-gray-300 rounded-lg bg-gray-50">
-            <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-              <Mic size={16} className="text-gray-500" />
-              직접 녹음하기
-            </h3>
-            
-            {!isRecording && !recordedAudioBlob && (
-              <div className="space-y-3">
-                <p className="text-xs text-gray-600">
-                  마이크를 사용하여 직접 음성을 녹음할 수 있습니다.
+          {/* Step 1: 업로드/녹음 */}
+          {currentStep === 'upload' && (
+            <div className="space-y-4">
+              {/* 녹음 버튼 */}
+              <div className="text-center">
+                {!isRecording ? (
+                  <div className="flex justify-center">
+                    <button
+                      onClick={startRecordingWithFileReset}
+                      className="w-16 h-16 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                    >
+                      <Mic size={24} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-center space-x-3">
+                      <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium text-red-400">
+                        {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
+                      </span>
+                    </div>
+                    <div className="flex justify-center">
+                      <button
+                        onClick={stopRecording}
+                        className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                      >
+                        <Square size={24} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <p className="text-xs text-gray-400 mt-2">
+                  {isRecording ? '녹음 중지' : '녹음하기'}
                 </p>
-                <Button
-                  onClick={startRecordingWithFileReset}
-                  className="w-full"
-                  variant="outline"
-                  size="sm"
-                >
-                  <Mic size={16} className="mr-2" />
-                  녹음 시작
-                </Button>
               </div>
-            )}
-            
-            {isRecording && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm font-medium text-red-600">녹음 중...</span>
-                  </div>
-                  <span className="text-sm text-gray-500">
-                    {Math.floor(recordingTime / 60)}:{(recordingTime % 60).toString().padStart(2, '0')}
-                  </span>
-                </div>
-                <Button
-                  onClick={stopRecording}
-                  className="w-full"
-                  variant="destructive"
-                  size="sm"
-                >
-                  <Square size={16} className="mr-2" />
-                  녹음 중지
-                </Button>
-              </div>
-            )}
-            
-            {recordedAudioBlob && !isRecording && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-green-600">녹음 완료</span>
-                  <Button
-                    onClick={restartRecordingWithFileReset}
-                    variant="ghost"
-                    size="sm"
-                  >
-                    <RotateCcw size={14} className="mr-1" />
-                    다시 녹음
-                  </Button>
-                </div>
-                <div className="text-xs text-gray-600 bg-white p-2 rounded border">
-                  <p>✅ 녹음이 완료되었습니다.</p>
-                  <p>🎵 아래 미리보기에서 녹음된 음성을 확인하세요.</p>
-                </div>
-              </div>
-            )}
-          </div>
 
-          {/* 오디오 미리보기 섹션 */}
-          {showPreview && audioUrl && (
-            <div className="mb-4 p-4 border border-gray-300 rounded-lg bg-gray-50">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                  <Volume2 size={16} className="text-gray-500" />
-                  오디오 미리보기
-                </h3>
-                <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded">
-                  {props.files[0]?.name}
-                </span>
+              {/* 또는 구분선 */}
+              <div className="flex items-center">
+                <div className="flex-1 h-px bg-gray-700"></div>
+                <span className="px-4 text-xs text-gray-500">또는</span>
+                <div className="flex-1 h-px bg-gray-700"></div>
               </div>
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <Button
-                    onClick={togglePlayPause}
-                    size="sm"
-                    variant="outline"
-                    className="flex items-center gap-2 min-w-[80px]"
-                  >
-                    {isPlaying ? <Pause size={16} /> : <Play size={16} />}
-                    {isPlaying ? '일시정지' : '재생'}
-                  </Button>
-                  <div className="flex-1">
-                    <audio
-                      ref={(el) => {
-                        if (el) setAudioElement(el)
-                      }}
-                      src={audioUrl}
-                      className="w-full"
-                      controls
-                      preload="metadata"
-                    />
-                  </div>
-                </div>
-                <div className="text-xs text-gray-600 bg-white p-2 rounded border">
-                  <p>✅ 오디오 파일이 성공적으로 선택되었습니다.</p>
-                  <p>🎵 위의 컨트롤을 사용하여 오디오를 미리 들어보세요.</p>
-                  <p>📝 변환할 텍스트를 입력하고 "TTS 생성 시작" 버튼을 클릭하세요.</p>
-                </div>
+
+              {/* 파일 업로드 */}
+              <div className="text-center">
+                <Dropzone {...props} className="border-2 border-dashed border-gray-600 rounded-lg p-8 hover:border-gray-500 transition-colors bg-gray-900/50">
+                  <DropzoneEmptyState />
+                  <DropzoneContent />
+                </Dropzone>
               </div>
             </div>
           )}
-          
-          <Dropzone {...props}>
-            <DropzoneEmptyState />
-            <DropzoneContent />
-          </Dropzone>
 
-          {/* TTS 생성 시작 버튼 */}
-          {((showPreview && props.files.length > 0) || recordedAudioBlob) && !props.loading && (
-            <div className="mt-4">
-              <Button
+          {/* Step 2: 미리듣기 */}
+          {currentStep === 'preview' && showPreview && (
+            <div className="space-y-4">
+              {/* 미리듣기 헤더 */}
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-200">
+                  {recordedAudioBlob ? '녹음 완료 · 미리듣기' : '업로드 완료 · 미리듣기'}
+                </span>
+                <button
+                  onClick={restartRecordingWithFileReset}
+                  className="text-xs text-gray-400 hover:text-gray-300 transition-colors"
+                >
+                  <RotateCcw size={14} />
+                </button>
+              </div>
+
+              {/* 미니멀 오디오 플레이어 */}
+              <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-700">
+                {/* 숨겨진 오디오 엘리먼트 */}
+                {audioUrl && (
+                  <audio
+                    ref={(el) => {
+                      if (el) setAudioElement(el)
+                    }}
+                    src={audioUrl}
+                    preload="metadata"
+                    style={{ display: 'none' }}
+                  />
+                )}
+                
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={togglePlayPause}
+                    className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center shadow-sm hover:shadow-md transition-shadow border border-gray-600"
+                  >
+                    {isPlaying ? <Pause size={16} className="text-white" /> : <Play size={16} className="text-white" />}
+                  </button>
+                  <div className="flex-1 space-y-1">
+                    <div 
+                      className="h-1 bg-gray-700 rounded-full overflow-hidden cursor-pointer"
+                      onClick={handleProgressClick}
+                    >
+                      <div 
+                        className="h-full bg-gradient-to-r from-pink-500 to-purple-500 rounded-full transition-all duration-300"
+                        style={{ width: duration > 0 && !isNaN(duration) ? `${(currentTime / duration) * 100}%` : '0%' }}
+                      ></div>
+                    </div>
+                    <div className="flex justify-between text-xs text-gray-400">
+                      <span>
+                        {formatTime(currentTime)}
+                      </span>
+                      <span>
+                        {isNaN(duration) ? '0:00' : formatTime(duration)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 다음 단계 버튼 */}
+              <button
+                onClick={() => setCurrentStep('text')}
+                className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 rounded-full font-medium hover:from-blue-600 hover:to-purple-600 transition-all duration-200"
+              >
+                다음 단계
+              </button>
+            </div>
+          )}
+
+          {/* Step 3: 텍스트 입력 */}
+          {currentStep === 'text' && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-200">변환할 텍스트</label>
+                <textarea
+                  value={gen_text}
+                  onChange={(e) => setGenText(e.target.value)}
+                  placeholder="원하는 텍스트를 입력하세요..."
+                  className="w-full h-24 px-4 py-3 border border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-900 text-white placeholder-gray-400"
+                />
+              </div>
+
+              {/* TTS 생성 시작 버튼 */}
+              <button
                 onClick={recordedAudioBlob ? startTTSWithRecordedAudio : props.onUpload}
                 disabled={
                   (props.files.length > 0 && props.files.some((file) => file.errors.length !== 0)) || 
                   !gen_text.trim() ||
                   isProcessing
                 }
-                className="w-full"
-                size="lg"
+                className="w-full bg-gradient-to-r from-pink-500 to-purple-500 text-white py-4 rounded-full font-medium hover:from-pink-600 hover:to-purple-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isProcessing ? '처리 중...' : 'TTS 생성 시작'}
-              </Button>
-              {!gen_text.trim() && (
-                <p className="text-xs text-red-500 mt-1">
-                  변환할 텍스트를 입력해주세요.
-                </p>
-              )}
+              </button>
             </div>
           )}
-        </>
+        </div>
       ) : (
-        <div>Loading user...</div>
+        <div className="text-center text-gray-400">Loading user...</div>
       )}
     </div>
   )
 }
 
-export { FileUploadDemo }
+export default FileUploadDemo
