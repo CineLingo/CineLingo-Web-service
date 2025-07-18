@@ -7,16 +7,45 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Play, Pause, Mic, Square, RotateCcw, Music } from 'lucide-react'
 
-// 미리 업로드된 오디오 파일 목록
-const PRESET_AUDIO_FILES = [
-  { name: '유재석 참고음성 1', file: '/yoojaeseok_ref1.wav', duration: '약 10초' },
-  { name: '손석희 참고음성 1', file: '/sonsukhee_ref1.wav', duration: '약 8초' },
-  { name: '이동진 참고음성', file: '/leedongjin_ref0.wav', duration: '약 8초' },
-  { name: '아이유 참고음성', file: '/iu_ref0.wav', duration: '약 10초' },
-  { name: '프랑치 튜터', file: '/franch_tutor.wav', duration: '약 9초' },
-  { name: '침착맨', file: '/chimchakman.wav', duration: '약 9초' },
-  { name: '지드래곤 참고음성 1', file: '/gdragon_ref1.wav', duration: '약 9초' },
-]
+  // 미리 업로드된 오디오 파일 목록
+  const PRESET_AUDIO_FILES = [
+    { name: '유재석 참고음성', file: '/yoojaeseok_ref1.wav', duration: '약 10초' },
+    { name: '손석희 참고음성', file: '/sonsukhee_ref1.wav', duration: '약 8초' },
+    { name: '이동진 참고음성', file: '/leedongjin_ref0.wav', duration: '약 8초' },
+    { name: '아이유 참고음성', file: '/iu_ref0.wav', duration: '약 10초' },
+    { name: '프랑스 튜터', file: '/franch_tutor.wav', duration: '약 9초' },
+    { name: '침착맨', file: '/chimchakman.wav', duration: '약 9초' },
+    { name: '지드래곤 참고음성', file: '/gdragon_ref1.wav', duration: '약 9초' },
+  ]
+
+  // 텍스트 예시 목록
+  const TEXT_EXAMPLES = [
+    {
+      id: 1,
+      title: '감사와 사랑의 메시지',
+      text: '좋아하는 것, 싫어하는 것, 사소한 습관까지 섬세하게 기억해 주는 너를 보면서 이런 사람이 곁에 있다는 게 얼마나 큰 축복인지 알게 됐어.'
+    },
+    {
+      id: 2,
+      title: '위로와 격려',
+      text: '오늘 하루도 정말 고생 많았어요. 눈에 보이지 않는 노력까지도 누군가는 분명히 알고 있을 거예요.'
+    },
+    {
+      id: 3,
+      title: '지지와 응원',
+      text: '당신이 얼마나 열심히 살아가고 있는지 잘 알아요. 비록 지금은 결과가 보이지 않더라도, 그 모든 시간과 마음은 헛되지 않을 거예요.'
+    },
+    {
+      id: 4,
+      title: '따뜻한 위로',
+      text: '괜히 네 마음속에 답을 혼자서만 품고 고민하지 않았으면 해. 언제든 괜찮으니, 네가 하고 싶은 말이 있다면 부담 갖지 말고 이야기해줘.'
+    },
+    {
+      id: 5,
+      title: '감사의 마음',
+      text: '지금까지 제가 여기까지 올 수 있었던 건 다 부모님 덕분이에요. 말로 다 표현할 순 없지만, 마음속으론 늘 감사하고 또 감사하고 있어요.'
+    }
+  ]
 
 const FileUploadDemo = () => {
   const [userId, setUserId] = useState<string | null>(null)
@@ -48,6 +77,9 @@ const FileUploadDemo = () => {
   // 미리 선택된 오디오 관련 상태
   const [selectedPresetAudio, setSelectedPresetAudio] = useState<string | null>(null)
   const [showPresetAudioList, setShowPresetAudioList] = useState(false)
+  
+  // 텍스트 예시 관련 상태
+  const [showTextExamples, setShowTextExamples] = useState(false)
   
   const supabase = createClient()
   const router = useRouter()
@@ -276,6 +308,12 @@ const FileUploadDemo = () => {
     console.log('설정 후 currentStep:', 'preview')
     console.log('설정 후 showPreview:', true)
   }, [currentStep, showPreview])
+
+  // 텍스트 예시 선택 함수
+  const handleTextExampleSelect = useCallback((exampleText: string) => {
+    setGenText(exampleText)
+    setShowTextExamples(false)
+  }, [])
 
   // 미리 선택된 오디오를 Supabase에 업로드하는 함수
   const uploadPresetAudio = useCallback(async (): Promise<string | null> => {
@@ -819,35 +857,35 @@ const FileUploadDemo = () => {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className="w-full max-w-md mx-auto px-4 sm:px-0">
       {userId ? (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* 단계 표시 */}
-          <div className="flex items-center justify-center space-x-8 mb-8">
-            <div className={`flex items-center space-x-2 ${currentStep === 'upload' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-                currentStep === 'upload' ? 'bg-blue-500 text-white' : 'bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-              }`}>
-                1
+          <div className="flex items-center justify-center space-x-4 sm:space-x-8 mb-6 sm:mb-8">
+                          <div className={`flex items-center space-x-1 sm:space-x-2 ${currentStep === 'upload' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs font-medium ${
+                  currentStep === 'upload' ? 'bg-blue-500 text-white' : 'bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                }`}>
+                  1
+                </div>
+                <span className="text-xs sm:text-sm font-medium hidden sm:inline">업로드</span>
               </div>
-              <span className="text-sm font-medium">업로드</span>
-            </div>
-            <div className={`flex items-center space-x-2 ${currentStep === 'preview' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-                currentStep === 'preview' ? 'bg-blue-500 text-white' : 'bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-              }`}>
-                2
+              <div className={`flex items-center space-x-1 sm:space-x-2 ${currentStep === 'preview' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs font-medium ${
+                  currentStep === 'preview' ? 'bg-blue-500 text-white' : 'bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                }`}>
+                  2
+                </div>
+                <span className="text-xs sm:text-sm font-medium hidden sm:inline">미리듣기</span>
               </div>
-              <span className="text-sm font-medium">미리듣기</span>
-            </div>
-            <div className={`flex items-center space-x-2 ${currentStep === 'text' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-                currentStep === 'text' ? 'bg-blue-500 text-white' : 'bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-              }`}>
-                3
+              <div className={`flex items-center space-x-1 sm:space-x-2 ${currentStep === 'text' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-xs font-medium ${
+                  currentStep === 'text' ? 'bg-blue-500 text-white' : 'bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                }`}>
+                  3
+                </div>
+                <span className="text-xs sm:text-sm font-medium hidden sm:inline">텍스트</span>
               </div>
-              <span className="text-sm font-medium">텍스트</span>
-            </div>
           </div>
 
           {errorMessage && (
@@ -864,16 +902,16 @@ const FileUploadDemo = () => {
 
           {/* Step 1: 업로드/녹음 */}
           {currentStep === 'upload' && (
-            <div className="space-y-4">
+            <div className="space-y-4 sm:space-y-6">
               {/* 녹음 버튼 */}
               <div className="text-center">
                 {!isRecording ? (
                   <div className="flex justify-center">
                     <button
                       onClick={startRecordingWithFileReset}
-                      className="w-16 h-16 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                      className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-200 touch-manipulation"
                     >
-                      <Mic size={24} />
+                      <Mic size={20} className="sm:w-6 sm:h-6" />
                     </button>
                   </div>
                 ) : (
@@ -887,9 +925,9 @@ const FileUploadDemo = () => {
                     <div className="flex justify-center">
                       <button
                         onClick={stopRecording}
-                        className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                        className="w-14 h-14 sm:w-16 sm:h-16 bg-red-500 rounded-full flex items-center justify-center text-white shadow-lg hover:shadow-xl transition-all duration-200 touch-manipulation"
                       >
-                        <Square size={24} />
+                        <Square size={20} className="sm:w-6 sm:h-6" />
                       </button>
                     </div>
                   </div>
@@ -910,10 +948,10 @@ const FileUploadDemo = () => {
               <div className="text-center">
                 <button
                   onClick={() => setShowPresetAudioList(!showPresetAudioList)}
-                  className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg font-medium hover:from-blue-600 hover:to-indigo-600 transition-all duration-200 flex items-center justify-center space-x-2"
+                  className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg font-medium hover:from-blue-600 hover:to-indigo-600 transition-all duration-200 flex items-center justify-center space-x-2 touch-manipulation"
                 >
-                  <Music size={20} />
-                  <span>미리 준비된 음성 선택 (beta)</span>
+                  <Music size={18} className="sm:w-5 sm:h-5" />
+                  <span className="text-sm sm:text-base">미리 준비된 음성 선택 (beta)</span>
                 </button>
                 
                 {showPresetAudioList && (
@@ -925,15 +963,15 @@ const FileUploadDemo = () => {
                           console.log('미리 선택된 오디오 버튼 클릭됨:', audio.file)
                           handlePresetAudioSelectWithReset(audio.file)
                         }}
-                        className="w-full p-3 text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                        className="w-full p-3 text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-manipulation"
                       >
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full flex items-center justify-center">
-                              <Music size={16} className="text-white" />
+                          <div className="flex items-center space-x-2 sm:space-x-3">
+                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full flex items-center justify-center">
+                              <Music size={14} className="sm:w-4 sm:h-4 text-white" />
                             </div>
-                            <div className="text-left">
-                              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                            <div className="text-left flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                                 {audio.name}
                               </p>
                               <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -941,7 +979,7 @@ const FileUploadDemo = () => {
                               </p>
                             </div>
                           </div>
-                          <div className="text-xs text-gray-400 dark:text-gray-500">
+                          <div className="text-xs text-gray-400 dark:text-gray-500 ml-2">
                             선택
                           </div>
                         </div>
@@ -960,7 +998,7 @@ const FileUploadDemo = () => {
 
               {/* 파일 업로드 */}
               <div className="text-center">
-                <Dropzone {...props} className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 hover:border-gray-400 dark:hover:border-gray-500 transition-colors bg-gray-50 dark:bg-gray-900/50">
+                <Dropzone {...props} className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 sm:p-8 hover:border-gray-400 dark:hover:border-gray-500 transition-colors bg-gray-50 dark:bg-gray-900/50">
                   <DropzoneEmptyState />
                   <DropzoneContent />
                 </Dropzone>
@@ -979,7 +1017,7 @@ const FileUploadDemo = () => {
             })
             return shouldShowPreview
           })() && (
-            <div className="space-y-4">
+            <div className="space-y-4 sm:space-y-6">
               {/* 미리듣기 헤더 */}
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
@@ -999,7 +1037,7 @@ const FileUploadDemo = () => {
               </div>
 
               {/* 미니멀 오디오 플레이어 */}
-              <div className="bg-gray-100 dark:bg-gray-900/50 rounded-lg p-4 border border-gray-300 dark:border-gray-700">
+              <div className="bg-gray-100 dark:bg-gray-900/50 rounded-lg p-3 sm:p-4 border border-gray-300 dark:border-gray-700">
                 {/* 숨겨진 오디오 엘리먼트 */}
                 {audioUrl && (
                   <audio
@@ -1012,12 +1050,12 @@ const FileUploadDemo = () => {
                   />
                 )}
                 
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2 sm:space-x-3">
                   <button
                     onClick={togglePlayPause}
-                    className="w-10 h-10 bg-gray-200 dark:bg-gray-800 rounded-full flex items-center justify-center shadow-sm hover:shadow-md transition-shadow border border-gray-300 dark:border-gray-600"
+                    className="w-8 h-8 sm:w-10 sm:h-10 bg-gray-200 dark:bg-gray-800 rounded-full flex items-center justify-center shadow-sm hover:shadow-md transition-shadow border border-gray-300 dark:border-gray-600 touch-manipulation"
                   >
-                    {isPlaying ? <Pause size={16} className="text-gray-700 dark:text-white" /> : <Play size={16} className="text-gray-700 dark:text-white" />}
+                    {isPlaying ? <Pause size={14} className="sm:w-4 sm:h-4 text-gray-700 dark:text-white" /> : <Play size={14} className="sm:w-4 sm:h-4 text-gray-700 dark:text-white" />}
                   </button>
                   <div className="flex-1 space-y-1">
                     <div 
@@ -1044,7 +1082,7 @@ const FileUploadDemo = () => {
               {/* 다음 단계 버튼 */}
               <button
                 onClick={() => setCurrentStep('text')}
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 rounded-full font-medium hover:from-blue-600 hover:to-purple-600 transition-all duration-200"
+                className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 rounded-full font-medium hover:from-blue-600 hover:to-purple-600 transition-all duration-200 touch-manipulation"
               >
                 다음 단계
               </button>
@@ -1053,9 +1091,44 @@ const FileUploadDemo = () => {
 
           {/* Step 3: 텍스트 입력 */}
           {currentStep === 'text' && (
-            <div className="space-y-4">
+            <div className="space-y-4 sm:space-y-6">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-200">변환할 텍스트</label>
+                
+                {/* 텍스트 예시 선택 버튼 */}
+                <button
+                  type="button"
+                  onClick={() => setShowTextExamples(!showTextExamples)}
+                  className="w-full py-2 px-3 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-between touch-manipulation"
+                >
+                  <span>텍스트 예시 선택하기</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {showTextExamples ? '접기' : '펼치기'}
+                  </span>
+                </button>
+                
+                {/* 텍스트 예시 목록 */}
+                {showTextExamples && (
+                  <div className="space-y-2 max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-900">
+                    {TEXT_EXAMPLES.map((example) => (
+                      <button
+                        key={example.id}
+                        onClick={() => handleTextExampleSelect(example.text)}
+                        className="w-full p-3 text-left border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors touch-manipulation"
+                      >
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">
+                            {example.title}
+                          </p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
+                            {example.text}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                
                 <textarea
                   value={gen_text}
                   onChange={(e) => {
@@ -1066,7 +1139,7 @@ const FileUploadDemo = () => {
                   }}
                   placeholder="원하는 텍스트를 입력하세요... (최대 150자)"
                   maxLength={150}
-                  className="w-full h-24 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                  className="w-full h-24 px-3 sm:px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm sm:text-base"
                 />
                 <div className="flex justify-end">
                   <span className={`text-xs ${gen_text.length >= 150 ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>
@@ -1083,7 +1156,7 @@ const FileUploadDemo = () => {
                   !gen_text.trim() ||
                   isProcessing
                 }
-                className="w-full bg-gradient-to-r from-pink-500 to-purple-500 text-white py-4 rounded-full font-medium hover:from-pink-600 hover:to-purple-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-gradient-to-r from-pink-500 to-purple-500 text-white py-4 rounded-full font-medium hover:from-pink-600 hover:to-purple-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
               >
                 {isProcessing ? '처리 중...' : 'TTS 생성 시작'}
               </button>

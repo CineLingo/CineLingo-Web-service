@@ -9,7 +9,7 @@ export function Hero() {
         {/* 브랜드 타이틀 */}
         <div className="space-y-6 sm:space-y-8">
           <h1 className="text-6xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent animate-gradient">
-            Nine seconds
+            Nine Seconds
           </h1>
         </div>
 
