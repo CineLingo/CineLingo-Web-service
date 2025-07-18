@@ -173,7 +173,7 @@ export default function TTSResultDetailPage() {
   }
 
   if (loading) return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-white dark:bg-gray-900">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <HomeButton variant="floating" />
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -187,7 +187,7 @@ export default function TTSResultDetailPage() {
   )
 
   if (error || !ttsRequest) return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-white dark:bg-gray-900">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <HomeButton variant="floating" />
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -209,7 +209,7 @@ export default function TTSResultDetailPage() {
   const statusInfo = getStatusInfo(ttsRequest.status)
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-white dark:bg-gray-900">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         <HomeButton variant="floating" />
         

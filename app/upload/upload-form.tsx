@@ -5,7 +5,18 @@ import { createClient } from '@/lib/supabase/client'
 import { useSupabaseUpload } from '@/hooks/use-supabase-upload'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Play, Pause, Mic, Square, RotateCcw } from 'lucide-react'
+import { Play, Pause, Mic, Square, RotateCcw, Music, Upload } from 'lucide-react'
+
+// 미리 업로드된 오디오 파일 목록
+const PRESET_AUDIO_FILES = [
+  { name: '유재석 참고음성 1', file: '/yoojaeseok_ref1.wav', duration: '약 10초' },
+  { name: '손석희 참고음성 1', file: '/sonsukhee_ref1.wav', duration: '약 8초' },
+  { name: '이동진 참고음성', file: '/leedongjin_ref0.wav', duration: '약 8초' },
+  { name: '아이유 참고음성', file: '/iu_ref0.wav', duration: '약 10초' },
+  { name: '프랑치 튜터', file: '/franch_tutor.wav', duration: '약 9초' },
+  { name: '침착맨', file: '/chimchakman.wav', duration: '약 9초' },
+  { name: '지드래곤 참고음성 1', file: '/gdragon_ref1.wav', duration: '약 9초' },
+]
 
 const FileUploadDemo = () => {
   const [userId, setUserId] = useState<string | null>(null)
@@ -25,7 +36,7 @@ const FileUploadDemo = () => {
   // 녹음 관련 상태
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
-    const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [audioChunks, setAudioChunks] = useState<Blob[]>([])
   const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null)
@@ -33,6 +44,10 @@ const FileUploadDemo = () => {
   
   // 현재 단계 관리
   const [currentStep, setCurrentStep] = useState<'upload' | 'preview' | 'text'>('upload')
+  
+  // 미리 선택된 오디오 관련 상태
+  const [selectedPresetAudio, setSelectedPresetAudio] = useState<string | null>(null)
+  const [showPresetAudioList, setShowPresetAudioList] = useState(false)
   
   const supabase = createClient()
   const router = useRouter()
@@ -232,6 +247,74 @@ const FileUploadDemo = () => {
       setDuration(0)
     }
   }, [recordedAudioBlob])
+
+  // 미리 선택된 오디오 처리 함수
+  const handlePresetAudioSelect = useCallback((audioFile: string) => {
+    console.log('미리 선택된 오디오 선택:', audioFile)
+    console.log('현재 currentStep:', currentStep)
+    console.log('현재 showPreview:', showPreview)
+    
+    setSelectedPresetAudio(audioFile)
+    setAudioUrl(audioFile)
+    setShowPreview(true)
+    setCurrentStep('preview')
+    
+    // 새로운 오디오 엘리먼트 생성
+    const audio = new Audio(audioFile)
+    setAudioElement(audio)
+    setIsPlaying(false)
+    setCurrentTime(0)
+    setDuration(0)
+    
+    // 녹음 관련 상태 초기화
+    setRecordedAudioBlob(null)
+    setAudioChunks([])
+    setRecordingTime(0)
+    
+    setShowPresetAudioList(false)
+    console.log('미리 선택된 오디오 설정 완료')
+    console.log('설정 후 currentStep:', 'preview')
+    console.log('설정 후 showPreview:', true)
+  }, [currentStep, showPreview])
+
+  // 미리 선택된 오디오를 Supabase에 업로드하는 함수
+  const uploadPresetAudio = useCallback(async (): Promise<string | null> => {
+    if (!selectedPresetAudio || !userId) return null
+    
+    try {
+      // 미리 선택된 오디오 파일을 fetch로 가져와서 Blob으로 변환
+      const response = await fetch(selectedPresetAudio)
+      if (!response.ok) {
+        throw new Error('Failed to fetch preset audio')
+      }
+      
+      const blob = await response.blob()
+      
+      // 파일명 추출
+      const fileName = selectedPresetAudio.split('/').pop() || `preset_audio_${Date.now()}.wav`
+      
+      // Supabase Storage에 업로드
+      const filePath = `reference/${userId}/${fileName}`
+      const { error } = await supabase.storage
+        .from('prototype')
+        .upload(filePath, blob, {
+          cacheControl: '3600',
+          upsert: false
+        })
+      
+      if (error) {
+        console.error('미리 선택된 오디오 업로드 실패:', error)
+        setErrorMessage('미리 선택된 오디오 업로드에 실패했습니다.')
+        return null
+      }
+      
+      return filePath
+    } catch (error) {
+      console.error('미리 선택된 오디오 업로드 중 오류:', error)
+      setErrorMessage('미리 선택된 오디오 업로드 중 오류가 발생했습니다.')
+      return null
+    }
+  }, [selectedPresetAudio, userId, supabase])
 
   // 녹음된 오디오가 변경될 때마다 미리보기 설정
   useEffect(() => {
@@ -512,6 +595,129 @@ const FileUploadDemo = () => {
     }
   }, [userId, recordedAudioBlob, gen_text, uploadRecordedAudio, supabase, router])
 
+  // 미리 선택된 오디오로 TTS 시작하는 함수
+  const startTTSWithPresetAudio = useCallback(async () => {
+    if (!userId || !selectedPresetAudio || !gen_text.trim()) return
+    
+    setIsProcessing(true)
+    setErrorMessage('')
+    
+    try {
+      // 1단계: 미리 선택된 오디오 업로드
+      const filePath = await uploadPresetAudio()
+      if (!filePath) {
+        setIsProcessing(false)
+        return
+      }
+      
+      // 2단계: signed URL 생성
+      const { data, error: urlError } = await supabase
+        .storage
+        .from('prototype')
+        .createSignedUrl(filePath, 60 * 60 * 24 * 30) // 30일
+
+      if (urlError || !data?.signedUrl) {
+        console.error('Error creating signed URL:', urlError?.message)
+        setErrorMessage('Signed URL 생성에 실패했습니다.')
+        setIsProcessing(false)
+        return
+      }
+
+      const signedUrl = data.signedUrl
+
+      // 3단계: tts_requests 테이블에 INSERT
+      const { data: insertData, error } = await supabase
+        .from('tts_requests')
+        .insert({
+          user_id: userId,
+          reference_audio_storage_path: filePath,
+          reference_audio_url: signedUrl,
+          gen_text: gen_text,
+          status: 'pending',
+        })
+        .select('tts_id')
+        .single()
+
+      if (error) {
+        console.error('Error inserting tts_request:', error.message)
+        setErrorMessage('TTS 요청 저장에 실패했습니다.')
+        setIsProcessing(false)
+        return
+      }
+
+      if (!insertData?.tts_id) {
+        console.error('No tts_id returned from insert')
+        setErrorMessage('TTS ID 생성에 실패했습니다.')
+        setIsProcessing(false)
+        return
+      }
+
+      // 4단계: TTS Runner Edge Function 호출
+      try {
+        console.log('Calling TTS Runner Edge Function with preset audio...')
+        console.log('Request payload:', {
+          tts_id: insertData.tts_id,
+          reference_audio_url: signedUrl,
+          gen_text: gen_text,
+          user_id: userId
+        })
+        
+        const { data: functionData, error: functionError } = await supabase.functions.invoke('tts-runner', {
+          body: {
+            tts_id: insertData.tts_id,
+            reference_audio_url: signedUrl,
+            gen_text: gen_text,
+            user_id: userId
+          }
+        })
+
+        if (functionError) {
+          console.error('Error calling TTS Runner:', functionError)
+          console.error('Error details:', {
+            message: functionError.message,
+            name: functionError.name,
+            status: functionError.status,
+            statusText: functionError.statusText
+          })
+          
+          // Update status to failed
+          await supabase
+            .from('tts_requests')
+            .update({ 
+              status: 'fail',
+              error_message: `Edge Function Error: ${functionError.message}`
+            })
+            .eq('tts_id', insertData.tts_id)
+        } else {
+          console.log('TTS Runner called successfully:', functionData)
+          // 성공적으로 호출되면 상태를 'in_progress'로 업데이트
+          await supabase
+            .from('tts_requests')
+            .update({ status: 'in_progress' })
+            .eq('tts_id', insertData.tts_id)
+        }
+      } catch (functionError) {
+        console.error('Error calling TTS Runner function:', functionError)
+        
+        // Update status to failed
+        await supabase
+          .from('tts_requests')
+          .update({ 
+            status: 'fail',
+            error_message: `Exception: ${functionError instanceof Error ? functionError.message : 'Unknown error'}`
+          })
+          .eq('tts_id', insertData.tts_id)
+      }
+
+      // 5단계: 결과 목록 페이지로 이동
+      router.push(`/user/results`)
+    } catch (error) {
+      console.error('TTS 처리 중 오류:', error)
+      setErrorMessage('TTS 처리 중 오류가 발생했습니다.')
+      setIsProcessing(false)
+    }
+  }, [userId, selectedPresetAudio, gen_text, uploadPresetAudio, supabase, router])
+
   const props = useSupabaseUpload({
     bucketName: 'prototype',
     path: userId ? `reference/${userId}` : undefined,
@@ -526,6 +732,8 @@ const FileUploadDemo = () => {
   const startRecordingWithFileReset = useCallback(async () => {
     // 기존 파일 업로드 초기화
     props.setFiles([])
+    // 미리 선택된 오디오 초기화
+    setSelectedPresetAudio(null)
     // 녹음 시작
     await startRecording()
   }, [props, startRecording])
@@ -534,7 +742,17 @@ const FileUploadDemo = () => {
   const restartRecordingWithFileReset = useCallback(() => {
     restartRecording()
     props.setFiles([])
+    setSelectedPresetAudio(null)
   }, [restartRecording, props])
+
+  // 미리 선택된 오디오 선택 시 파일 업로드 초기화
+  const handlePresetAudioSelectWithReset = useCallback((audioFile: string) => {
+    console.log('handlePresetAudioSelectWithReset 호출됨:', audioFile)
+    // 먼저 파일 업로드 초기화
+    props.setFiles([])
+    // 그 다음 미리 선택된 오디오 설정
+    handlePresetAudioSelect(audioFile)
+  }, [handlePresetAudioSelect, props])
 
   // 파일이 선택되면 미리보기 표시
   useEffect(() => {
@@ -552,15 +770,32 @@ const FileUploadDemo = () => {
       setAudioChunks([])
       setRecordingTime(0)
       
+      // 미리 선택된 오디오 초기화 (파일이 실제로 업로드된 경우에만)
+      if (props.files.length > 0) {
+        setSelectedPresetAudio(null)
+      }
+      
       // 새로운 파일 설정
       handleFileSelect(props.files)
     } else {
-      // 파일이 없으면 미리보기 숨기기
-      clearAudioPreview()
+      // 파일이 없으면 미리보기 숨기기 (미리 선택된 오디오가 없을 때만)
+      if (!selectedPresetAudio) {
+        clearAudioPreview()
+      }
     }
-  }, [props.files, handleFileSelect, clearAudioPreview])
+  }, [props.files, handleFileSelect, clearAudioPreview, selectedPresetAudio])
 
+  // 상태 변화 디버깅을 위한 useEffect
+  useEffect(() => {
+    console.log('상태 변화:', {
+      currentStep,
+      showPreview,
+      selectedPresetAudio,
+      audioUrl
+    })
+  }, [currentStep, showPreview, selectedPresetAudio, audioUrl])
 
+  // 미리 선택된 오디오 처리 함수
 
   // 시간 포맷 함수
   const formatTime = (seconds: number) => {
@@ -589,25 +824,25 @@ const FileUploadDemo = () => {
         <div className="space-y-6">
           {/* 단계 표시 */}
           <div className="flex items-center justify-center space-x-8 mb-8">
-            <div className={`flex items-center space-x-2 ${currentStep === 'upload' ? 'text-blue-400' : 'text-gray-500'}`}>
+            <div className={`flex items-center space-x-2 ${currentStep === 'upload' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
               <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-                currentStep === 'upload' ? 'bg-blue-500 text-white' : 'bg-gray-700 text-gray-400'
+                currentStep === 'upload' ? 'bg-blue-500 text-white' : 'bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
               }`}>
                 1
               </div>
               <span className="text-sm font-medium">업로드</span>
             </div>
-            <div className={`flex items-center space-x-2 ${currentStep === 'preview' ? 'text-blue-400' : 'text-gray-500'}`}>
+            <div className={`flex items-center space-x-2 ${currentStep === 'preview' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
               <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-                currentStep === 'preview' ? 'bg-blue-500 text-white' : 'bg-gray-700 text-gray-400'
+                currentStep === 'preview' ? 'bg-blue-500 text-white' : 'bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
               }`}>
                 2
               </div>
               <span className="text-sm font-medium">미리듣기</span>
             </div>
-            <div className={`flex items-center space-x-2 ${currentStep === 'text' ? 'text-blue-400' : 'text-gray-500'}`}>
+            <div className={`flex items-center space-x-2 ${currentStep === 'text' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
               <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-                currentStep === 'text' ? 'bg-blue-500 text-white' : 'bg-gray-700 text-gray-400'
+                currentStep === 'text' ? 'bg-blue-500 text-white' : 'bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
               }`}>
                 3
               </div>
@@ -616,13 +851,13 @@ const FileUploadDemo = () => {
           </div>
 
           {errorMessage && (
-            <div className="p-3 bg-red-900/50 border border-red-700 text-red-300 rounded-lg text-sm">
+            <div className="p-3 bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg text-sm">
               {errorMessage}
             </div>
           )}
           
           {isProcessing && (
-            <div className="p-3 bg-blue-900/50 border border-blue-700 text-blue-300 rounded-lg text-sm">
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 rounded-lg text-sm">
               TTS 처리를 시작하고 있습니다...
             </div>
           )}
@@ -659,21 +894,73 @@ const FileUploadDemo = () => {
                     </div>
                   </div>
                 )}
-                <p className="text-xs text-gray-400 mt-2">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                   {isRecording ? '녹음 중지' : '녹음하기'}
                 </p>
               </div>
 
               {/* 또는 구분선 */}
               <div className="flex items-center">
-                <div className="flex-1 h-px bg-gray-700"></div>
-                <span className="px-4 text-xs text-gray-500">또는</span>
-                <div className="flex-1 h-px bg-gray-700"></div>
+                <div className="flex-1 h-px bg-gray-300 dark:bg-gray-700"></div>
+                <span className="px-4 text-xs text-gray-500 dark:text-gray-400">또는</span>
+                <div className="flex-1 h-px bg-gray-300 dark:bg-gray-700"></div>
+              </div>
+
+              {/* 미리 선택된 오디오 목록 */}
+              <div className="text-center">
+                <button
+                  onClick={() => setShowPresetAudioList(!showPresetAudioList)}
+                  className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg font-medium hover:from-blue-600 hover:to-indigo-600 transition-all duration-200 flex items-center justify-center space-x-2"
+                >
+                  <Music size={20} />
+                  <span>미리 준비된 음성 선택 (beta)</span>
+                </button>
+                
+                {showPresetAudioList && (
+                  <div className="mt-4 space-y-2 max-h-60 overflow-y-auto">
+                    {PRESET_AUDIO_FILES.map((audio, index) => (
+                      <button
+                        key={index}
+                        onClick={() => {
+                          console.log('미리 선택된 오디오 버튼 클릭됨:', audio.file)
+                          handlePresetAudioSelectWithReset(audio.file)
+                        }}
+                        className="w-full p-3 text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full flex items-center justify-center">
+                              <Music size={16} className="text-white" />
+                            </div>
+                            <div className="text-left">
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                {audio.name}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {audio.duration}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-400 dark:text-gray-500">
+                            선택
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 또는 구분선 */}
+              <div className="flex items-center">
+                <div className="flex-1 h-px bg-gray-300 dark:bg-gray-700"></div>
+                <span className="px-4 text-xs text-gray-500 dark:text-gray-400">또는</span>
+                <div className="flex-1 h-px bg-gray-300 dark:bg-gray-700"></div>
               </div>
 
               {/* 파일 업로드 */}
               <div className="text-center">
-                <Dropzone {...props} className="border-2 border-dashed border-gray-600 rounded-lg p-8 hover:border-gray-500 transition-colors bg-gray-900/50">
+                <Dropzone {...props} className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 hover:border-gray-400 dark:hover:border-gray-500 transition-colors bg-gray-50 dark:bg-gray-900/50">
                   <DropzoneEmptyState />
                   <DropzoneContent />
                 </Dropzone>
@@ -682,23 +969,37 @@ const FileUploadDemo = () => {
           )}
 
           {/* Step 2: 미리듣기 */}
-          {currentStep === 'preview' && showPreview && (
+          {(() => {
+            const shouldShowPreview = currentStep === 'preview' && (showPreview || selectedPresetAudio)
+            console.log('미리듣기 조건 확인:', {
+              currentStep,
+              showPreview,
+              selectedPresetAudio,
+              shouldShowPreview
+            })
+            return shouldShowPreview
+          })() && (
             <div className="space-y-4">
               {/* 미리듣기 헤더 */}
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-200">
-                  {recordedAudioBlob ? '녹음 완료 · 미리듣기' : '업로드 완료 · 미리듣기'}
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                  {recordedAudioBlob ? '녹음 완료 · 미리듣기' : 
+                   selectedPresetAudio ? '미리 준비된 음성 · 미리듣기' : 
+                   '업로드 완료 · 미리듣기'}
                 </span>
                 <button
-                  onClick={restartRecordingWithFileReset}
-                  className="text-xs text-gray-400 hover:text-gray-300 transition-colors"
+                  onClick={() => {
+                    restartRecordingWithFileReset()
+                    setSelectedPresetAudio(null)
+                  }}
+                  className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                 >
                   <RotateCcw size={14} />
                 </button>
               </div>
 
               {/* 미니멀 오디오 플레이어 */}
-              <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-700">
+              <div className="bg-gray-100 dark:bg-gray-900/50 rounded-lg p-4 border border-gray-300 dark:border-gray-700">
                 {/* 숨겨진 오디오 엘리먼트 */}
                 {audioUrl && (
                   <audio
@@ -714,13 +1015,13 @@ const FileUploadDemo = () => {
                 <div className="flex items-center space-x-3">
                   <button
                     onClick={togglePlayPause}
-                    className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center shadow-sm hover:shadow-md transition-shadow border border-gray-600"
+                    className="w-10 h-10 bg-gray-200 dark:bg-gray-800 rounded-full flex items-center justify-center shadow-sm hover:shadow-md transition-shadow border border-gray-300 dark:border-gray-600"
                   >
-                    {isPlaying ? <Pause size={16} className="text-white" /> : <Play size={16} className="text-white" />}
+                    {isPlaying ? <Pause size={16} className="text-gray-700 dark:text-white" /> : <Play size={16} className="text-gray-700 dark:text-white" />}
                   </button>
                   <div className="flex-1 space-y-1">
                     <div 
-                      className="h-1 bg-gray-700 rounded-full overflow-hidden cursor-pointer"
+                      className="h-1 bg-gray-300 dark:bg-gray-700 rounded-full overflow-hidden cursor-pointer"
                       onClick={handleProgressClick}
                     >
                       <div 
@@ -728,7 +1029,7 @@ const FileUploadDemo = () => {
                         style={{ width: duration > 0 && !isNaN(duration) ? `${(currentTime / duration) * 100}%` : '0%' }}
                       ></div>
                     </div>
-                    <div className="flex justify-between text-xs text-gray-400">
+                    <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
                       <span>
                         {formatTime(currentTime)}
                       </span>
@@ -754,18 +1055,29 @@ const FileUploadDemo = () => {
           {currentStep === 'text' && (
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-200">변환할 텍스트</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-200">변환할 텍스트</label>
                 <textarea
                   value={gen_text}
-                  onChange={(e) => setGenText(e.target.value)}
-                  placeholder="원하는 텍스트를 입력하세요..."
-                  className="w-full h-24 px-4 py-3 border border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-gray-900 text-white placeholder-gray-400"
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value.length <= 150) {
+                      setGenText(value);
+                    }
+                  }}
+                  placeholder="원하는 텍스트를 입력하세요... (최대 150자)"
+                  maxLength={150}
+                  className="w-full h-24 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                 />
+                <div className="flex justify-end">
+                  <span className={`text-xs ${gen_text.length >= 150 ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>
+                    {gen_text.length}/150
+                  </span>
+                </div>
               </div>
 
               {/* TTS 생성 시작 버튼 */}
               <button
-                onClick={recordedAudioBlob ? startTTSWithRecordedAudio : props.onUpload}
+                onClick={recordedAudioBlob ? startTTSWithRecordedAudio : selectedPresetAudio ? startTTSWithPresetAudio : props.onUpload}
                 disabled={
                   (props.files.length > 0 && props.files.some((file) => file.errors.length !== 0)) || 
                   !gen_text.trim() ||
@@ -779,7 +1091,7 @@ const FileUploadDemo = () => {
           )}
         </div>
       ) : (
-        <div className="text-center text-gray-400">Loading user...</div>
+        <div className="text-center text-gray-500 dark:text-gray-400">Loading user...</div>
       )}
     </div>
   )

@@ -179,8 +179,8 @@ export default function UserResultsPage() {
   if (loading) return (
     <div className="max-w-4xl mx-auto mt-4 sm:mt-8 p-4 sm:p-8">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-400 mx-auto"></div>
-        <p className="mt-4 text-gray-400">로딩 중...</p>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-400 dark:border-gray-600 mx-auto"></div>
+        <p className="mt-4 text-gray-600 dark:text-gray-400">로딩 중...</p>
       </div>
     </div>
   )
@@ -189,8 +189,8 @@ export default function UserResultsPage() {
     <div className="max-w-4xl mx-auto mt-4 sm:mt-8 p-4 sm:p-8">
       <HomeButton variant="floating" />
       <div className="text-center">
-        <h1 className="text-xl sm:text-2xl font-bold mb-4 text-gray-100">보이스북</h1>
-        <p className="text-gray-400 text-sm sm:text-base">아직 TTS 요청이 없습니다.</p>
+        <h1 className="text-xl sm:text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">보이스북</h1>
+        <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">아직 TTS 요청이 없습니다.</p>
         <Link 
           href="/upload" 
           className="inline-block mt-4 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-all duration-300 text-sm sm:text-base"
@@ -207,12 +207,12 @@ export default function UserResultsPage() {
       <div className="flex items-center justify-between mb-4 sm:mb-6">
         <div className="flex items-center gap-4">
           <HomeButton variant="minimal" />
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-100">보이스북</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">보이스북</h1>
         </div>
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-2 px-3 py-2 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="새로고침"
         >
           <RefreshCw 
@@ -230,17 +230,17 @@ export default function UserResultsPage() {
            return (
              <div 
                key={row.tts_id} 
-               className="bg-gray-900 border border-gray-700 rounded-lg p-3 sm:p-4 transition-all duration-300 hover:bg-gray-800"
+               className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4 transition-all duration-300 hover:bg-gray-50 dark:hover:bg-gray-800"
              >
               {/* 요청 시간 */}
-              <div className="text-xs text-gray-400 mb-2">
+              <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                 {formatDate(row.created_at)}
               </div>
 
               {/* 요청한 텍스트 */}
               <div className="mb-3 sm:mb-4">
                 <p 
-                  className="text-gray-100 text-sm leading-relaxed cursor-pointer hover:text-gray-300 transition-colors"
+                  className="text-gray-900 dark:text-gray-100 text-sm leading-relaxed cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                   onClick={() => {
                     setSelectedText(row.gen_text)
                     setShowTextModal(true)
@@ -261,7 +261,7 @@ export default function UserResultsPage() {
                      />
                    </div>
                  ) : (
-                  <div className="flex items-center gap-2 text-gray-400 text-sm">
+                  <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
                     {statusInfo.icon}
                     <span className={statusInfo.color}>{statusInfo.text}</span>
                   </div>
@@ -281,7 +281,7 @@ export default function UserResultsPage() {
                     <span className="sm:hidden">다운</span>
                   </button>
                 ) : (
-                  <div className={`flex-1 h-12 sm:h-11 flex items-center justify-center gap-2 bg-gray-700 text-sm rounded-lg ${statusInfo.color}`}>
+                  <div className={`flex-1 h-12 sm:h-11 flex items-center justify-center gap-2 bg-gray-200 dark:bg-gray-700 text-sm rounded-lg ${statusInfo.color}`}>
                     {statusInfo.icon}
                     <span className="hidden sm:inline">{statusInfo.text}</span>
                     <span className="sm:hidden">{statusInfo.text}</span>
@@ -290,7 +290,7 @@ export default function UserResultsPage() {
                 
                 <Link
                   href={`/user/results/${row.tts_id}`}
-                  className="h-12 w-12 sm:h-11 sm:w-11 flex items-center justify-center bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-300 rounded-lg transition-colors"
+                  className="h-12 w-12 sm:h-11 sm:w-11 flex items-center justify-center bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded-lg transition-colors"
                   title="상세 보기"
                 >
                   <Eye size={18} />
@@ -311,19 +311,19 @@ export default function UserResultsPage() {
             }
           }}
         >
-          <div className="bg-gray-900 border border-gray-700 rounded-lg w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg w-full max-w-2xl max-h-[80vh] overflow-y-auto">
             <div className="p-4 sm:p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-100">입력 텍스트</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">입력 텍스트</h3>
                 <button
                   onClick={() => setShowTextModal(false)}
-                  className="text-gray-400 hover:text-gray-200 text-2xl w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-800 transition-colors"
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-2xl w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 >
                   ✕
                 </button>
               </div>
-              <div className="bg-gray-800 p-3 sm:p-4 rounded-lg">
-                <p className="text-gray-100 whitespace-pre-wrap text-sm sm:text-base leading-relaxed">
+              <div className="bg-gray-100 dark:bg-gray-800 p-3 sm:p-4 rounded-lg">
+                <p className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap text-sm sm:text-base leading-relaxed">
                   {selectedText}
                 </p>
               </div>
