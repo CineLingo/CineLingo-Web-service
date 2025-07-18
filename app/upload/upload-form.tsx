@@ -5,8 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useSupabaseUpload } from '@/hooks/use-supabase-upload'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Play, Pause, Volume2, Mic, Square, RotateCcw, Upload, FileAudio } from 'lucide-react'
+import { Play, Pause, Mic, Square, RotateCcw } from 'lucide-react'
 
 const FileUploadDemo = () => {
   const [userId, setUserId] = useState<string | null>(null)
@@ -26,7 +25,8 @@ const FileUploadDemo = () => {
   // 녹음 관련 상태
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
+    const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [audioChunks, setAudioChunks] = useState<Blob[]>([])
   const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null)
   const [recordingTimer, setRecordingTimer] = useState<NodeJS.Timeout | null>(null)
@@ -252,7 +252,7 @@ const FileUploadDemo = () => {
       
       // Supabase Storage에 업로드
       const fileName = `reference/${userId}/recorded_${Date.now()}.webm`
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from('prototype')
         .upload(fileName, file, {
           cacheControl: '3600',
@@ -560,12 +560,7 @@ const FileUploadDemo = () => {
     }
   }, [props.files, handleFileSelect, clearAudioPreview])
 
-  // 텍스트 입력 완료 시 다음 단계로
-  const handleTextSubmit = () => {
-    if (gen_text.trim()) {
-      setCurrentStep('text')
-    }
-  }
+
 
   // 시간 포맷 함수
   const formatTime = (seconds: number) => {

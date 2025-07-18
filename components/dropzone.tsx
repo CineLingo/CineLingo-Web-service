@@ -2,10 +2,8 @@
 
 import { cn } from '@/lib/utils'
 import { type UseSupabaseUploadReturn } from '@/hooks/use-supabase-upload'
-import { Button } from '@/components/ui/button'
-import { CheckCircle, File, Loader2, Upload, X } from 'lucide-react'
+import { CheckCircle, Upload, X } from 'lucide-react'
 import { createContext, type PropsWithChildren, useCallback, useContext } from 'react'
-import Image from 'next/image'
 import { FileAudio } from 'lucide-react'
 
 
@@ -68,11 +66,9 @@ const DropzoneContent = ({ className }: { className?: string }) => {
   const {
     files,
     setFiles,
-    onUpload,
     loading,
     successes,
     errors,
-    maxFileSize,
     maxFiles,
     isSuccess,
   } = useDropzoneContext()
@@ -148,7 +144,7 @@ const DropzoneContent = ({ className }: { className?: string }) => {
 }
 
 const DropzoneEmptyState = ({ className }: { className?: string }) => {
-  const { maxFiles, maxFileSize, inputRef, isSuccess } = useDropzoneContext()
+  const { inputRef, isSuccess } = useDropzoneContext()
 
   if (isSuccess) {
     return null

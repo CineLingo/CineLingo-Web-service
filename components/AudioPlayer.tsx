@@ -20,7 +20,7 @@ export default function AudioPlayer({
   const [progress, setProgress] = useState(0)
   const [duration, setDuration] = useState(0)
   const audioRef = useRef<HTMLAudioElement>(null)
-  const animationRef = useRef<number | null>(null)
+
 
   // 오디오 메타데이터 로드
   useEffect(() => {

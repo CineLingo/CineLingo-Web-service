@@ -24,7 +24,7 @@ export default function AudioPlayerWithRealWaveform({
   const [waveformData, setWaveformData] = useState<number[]>([])
   const audioRef = useRef<HTMLAudioElement>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
-  const analyserRef = useRef<AnalyserNode | null>(null)
+
 
   // 오디오 컨텍스트 초기화 및 웨이브폼 데이터 생성
   useEffect(() => {
@@ -34,6 +34,7 @@ export default function AudioPlayerWithRealWaveform({
         const arrayBuffer = await response.arrayBuffer()
         
         if (!audioContextRef.current) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
         }
         

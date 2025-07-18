@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Download, Eye, Clock, CheckCircle, XCircle, AlertCircle, MoreVertical, RefreshCw } from 'lucide-react'
+import { Download, Eye, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 import HomeButton from '@/components/home-button'
 import AudioPlayer from '@/components/AudioPlayer'
@@ -35,7 +35,7 @@ export default function UserResultsPage() {
   }, [supabase])
 
   // user_id로 모든 TTS 요청 불러오기
-  const fetchRows = async () => {
+  const fetchRows = useCallback(async () => {
     if (!userId) return
     const { data } = await supabase
       .from('tts_requests')
@@ -45,11 +45,11 @@ export default function UserResultsPage() {
     setRows((data as TTSRequestRow[]) || [])
     setLoading(false)
     setRefreshing(false)
-  }
+  }, [userId, supabase])
 
   useEffect(() => {
     fetchRows()
-  }, [userId, supabase])
+  }, [userId, supabase, fetchRows])
 
   // 새로고침 함수
   const handleRefresh = () => {
@@ -123,7 +123,6 @@ export default function UserResultsPage() {
 
     // 같은 날인지 확인
     const isToday = date.toDateString() === now.toDateString()
-    const isYesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toDateString() === date.toDateString()
 
     if (diffInMinutes < 1) {
       return '방금 전'

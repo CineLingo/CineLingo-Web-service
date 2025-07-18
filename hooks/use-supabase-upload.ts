@@ -166,7 +166,7 @@ const useSupabaseUpload = (options: UseSupabaseUploadOptions) => {
     }
 
     setLoading(false)
-  }, [files, path, bucketName, errors, successes, options])
+  }, [files, path, bucketName, errors, successes, options, cacheControl, upsert])
 
   useEffect(() => {
     if (files.length === 0) {
@@ -187,7 +187,7 @@ const useSupabaseUpload = (options: UseSupabaseUploadOptions) => {
         setFiles(newFiles)
       }
     }
-  }, [files.length, setFiles, maxFiles])
+  }, [files.length, setFiles, maxFiles, files])
 
   return {
     files,

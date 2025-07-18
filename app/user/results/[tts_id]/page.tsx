@@ -139,7 +139,6 @@ export default function TTSResultDetailPage() {
 
     // 같은 날인지 확인
     const isToday = date.toDateString() === now.toDateString()
-    const isYesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toDateString() === date.toDateString()
 
     if (diffInMinutes < 1) {
       return '방금 전'
