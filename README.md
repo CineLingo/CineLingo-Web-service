@@ -1,4 +1,4 @@
-# Cinelingo Custom TTS Web
+# Cinelingo Web Service
 
 Custom Text-to-Speech (TTS) web application built with Next.js, Supabase, and modern web technologies.
 
