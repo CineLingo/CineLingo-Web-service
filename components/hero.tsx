@@ -23,11 +23,10 @@ export function Hero() {
         {/* 서브 설명 */}
         <div className="space-y-4 sm:space-y-6">
           <p className="text-base sm:text-lg text-gray-700 dark:text-gray-300 font-medium">
-            9초면 충분합니다.
+           9초 내외의 목소리 샘플이면 충분합니다.
           </p>
           <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 leading-relaxed font-light">
-            짧은 목소리 샘플로 당신의 목소리처럼, 또는 원하는 누군가처럼.
-            <br />
+
             자연스럽고 감정이 담긴 한국어 음성.
           </p>
         </div>
