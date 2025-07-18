@@ -101,7 +101,7 @@ export default function UserResultsPage() {
         return {
           icon: <AlertCircle className="w-4 h-4 text-blue-500" />,
           color: 'text-blue-600 dark:text-blue-400',
-          text: '처리중'
+          text: '처리중 (약 50초 소요)'
         }
       default:
         return {
