@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Share2, Copy, X } from 'lucide-react'
+import { Share2, X } from 'lucide-react'
 
 interface ShareButtonProps {
   ttsId: string
@@ -22,7 +22,6 @@ export default function ShareButton({
   const [copied, setCopied] = useState(false)
 
   const shareUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/share/${ttsId}`
-  const shareText = `내가 만든 TTS 음성 들어보세요!`
 
   // 공유 버튼 클릭 핸들러
   const handleShareClick = () => {

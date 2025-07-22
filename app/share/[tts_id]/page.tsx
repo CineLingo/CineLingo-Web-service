@@ -124,7 +124,7 @@ export default function SharePage() {
           text: shareText,
           url: shareUrl,
         })
-      } catch (error) {
+      } catch {
         console.log('공유가 취소되었습니다.')
       }
     } else {
