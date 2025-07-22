@@ -8,10 +8,14 @@ export function GoogleAuthButton() {
   const supabase = createClient();
 
   const handleSignIn = async () => {
+    // 환경 변수에서 기본 URL을 가져오거나, 개발 환경에서는 localhost 사용
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
+      (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+    
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${location.origin}/auth/callback`,
+        redirectTo: `${baseUrl}/auth/callback`,
       },
     });
   };

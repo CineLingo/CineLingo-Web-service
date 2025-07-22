@@ -1,11 +1,10 @@
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  // 로그인 후 홈페이지로 리디렉션 (원하는 경로로 수정하고 싶으면 "/"를 "/mypage/..."로 수정)
-//   const next = searchParams.get("next") ?? "/";
+  // 로그인 후 실제 서비스 페이지로 리디렉션
   const next = searchParams.get("next") ?? "/upload";
 
   if (code) {

@@ -6,6 +6,7 @@ import { Download, Eye, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw } fr
 import Link from 'next/link'
 import HomeButton from '@/components/home-button'
 import AudioPlayer from '@/components/AudioPlayer'
+import ShareButton from '@/components/ShareButton'
 
 type TTSRequestRow = {
   tts_id: string
@@ -286,6 +287,17 @@ export default function UserResultsPage() {
                     <span className="hidden sm:inline">{statusInfo.text}</span>
                     <span className="sm:hidden">{statusInfo.text}</span>
                   </div>
+                )}
+                
+                {/* 공유 버튼 (성공한 결과만) */}
+                {row.status === 'success' && (
+                  <ShareButton
+                    ttsId={row.tts_id}
+                    text=""
+                    variant="ghost"
+                    size="sm"
+                    className="h-12 w-12 sm:h-11 sm:w-11 flex items-center justify-center bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded-lg transition-colors"
+                  />
                 )}
                 
                 <Link

@@ -6,6 +6,7 @@ import { Download, ArrowLeft, Clock, CheckCircle, XCircle, AlertCircle } from 'l
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import HomeButton from '@/components/home-button'
+import ShareButton from '@/components/ShareButton'
 
 type TTSRequestDetail = {
   tts_id: string
@@ -288,13 +289,22 @@ export default function TTSResultDetailPage() {
                     preload="metadata"
                   />
                 </div>
-                <button
-                  onClick={() => handleDownload(ttsRequest.public_url!, `tts-generated-${ttsRequest.tts_id}.mp3`)}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-all duration-300 text-sm font-medium touch-manipulation"
-                >
-                  <Download size={16} />
-                  음성 파일 다운로드
-                </button>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={() => handleDownload(ttsRequest.public_url!, `tts-generated-${ttsRequest.tts_id}.mp3`)}
+                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-all duration-300 text-sm font-medium touch-manipulation"
+                  >
+                    <Download size={16} />
+                    음성 파일 다운로드
+                  </button>
+                  <ShareButton 
+                    ttsId={ttsRequest.tts_id}
+                    text="공유하기"
+                    variant="outline"
+                    size="md"
+                    className="flex-1 sm:flex-none"
+                  />
+                </div>
               </div>
             ) : (
               <div className="text-center py-6 sm:py-8">

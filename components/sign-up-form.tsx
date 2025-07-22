@@ -41,11 +41,16 @@ export function SignUpForm({
     }
 
     try {
+      // 환경 변수에서 기본 URL을 가져오거나, 개발 환경에서는 localhost 사용
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
+        (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+      const redirectUrl = `${baseUrl}/upload`;
+        
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/protected`,
+          emailRedirectTo: redirectUrl,
         },
       });
       if (error) throw error;
