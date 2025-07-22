@@ -52,6 +52,27 @@ export default function UserResultsPage() {
     fetchRows()
   }, [userId, supabase, fetchRows])
 
+  // 자동 새로고침
+  useEffect(() => {
+    if (!userId) return;
+
+    const channel = supabase
+      .channel('custom-all-channel')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'tts_requests',
+        filter: `user_id=eq.${userId}`
+      }, payload => {
+        fetchRows();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    }
+  }, [userId, supabase]);
+
   // 새로고침 함수
   const handleRefresh = () => {
     setRefreshing(true)
