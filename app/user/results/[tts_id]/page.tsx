@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Download, ArrowLeft, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
@@ -37,37 +37,53 @@ export default function TTSResultDetailPage() {
     fetchUser()
   }, [supabase])
 
-  // 특정 TTS 요청 불러오기
-  useEffect(() => {
+  const fetchTTSRequest = useCallback(async () => {
     if (!userId || !ttsId) return
-    
-    const fetchTTSRequest = async () => {
-      const { data, error } = await supabase
-        .from('tts_requests')
-        .select('*')
-        .eq('tts_id', ttsId)
-        .eq('user_id', userId)
-        .single()
 
-      if (error) {
-        console.error('Error fetching TTS request:', error)
-        setError('TTS 요청을 찾을 수 없습니다.')
-        setLoading(false)
-        return
-      }
+    const { data, error } = await supabase
+      .from('tts_requests')
+      .select('*')
+      .eq('tts_id', ttsId)
+      .eq('user_id', userId)
+      .single()
 
-      if (!data) {
-        setError('TTS 요청을 찾을 수 없습니다.')
-        setLoading(false)
-        return
-      }
-
-      setTtsRequest(data as TTSRequestDetail)
+    if (error) {
+      console.error('Error fetching TTS request:', error)
+      setError('TTS 요청을 찾을 수 없습니다.')
       setLoading(false)
+      return
     }
 
-    fetchTTSRequest()
+    if (!data) {
+      setError('TTS 요청을 찾을 수 없습니다.')
+      setLoading(false)
+      return
+    }
+
+    setTtsRequest(data as TTSRequestDetail)
+    setLoading(false)
   }, [userId, ttsId, supabase])
+
+  // 특정 TTS 요청 불러오기
+  useEffect(() => {
+    fetchTTSRequest()
+  }, [fetchTTSRequest])
+
+  // 자동 새로고침
+  useEffect(() => {
+    if (!userId || !ttsId) return
+
+    const channel = supabase
+      .channel(`tts-request-detail-${ttsId}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tts_requests', filter: `tts_id=eq.${ttsId}` }, () => {
+        fetchTTSRequest()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [userId, ttsId, supabase, fetchTTSRequest])
 
   // 다운로드 함수
   const handleDownload = async (url: string, filename?: string) => {
