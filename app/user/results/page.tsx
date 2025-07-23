@@ -63,7 +63,7 @@ export default function UserResultsPage() {
         schema: 'public',
         table: 'tts_requests',
         filter: `user_id=eq.${userId}`
-      }, _ => {
+      }, () => {
         fetchRows();
       })
       .subscribe();
