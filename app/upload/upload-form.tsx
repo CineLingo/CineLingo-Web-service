@@ -329,15 +329,15 @@ const FileUploadDemo = () => {
       const blob = await response.blob()
       
       // 파일명 추출
-      const fileName = selectedPresetAudio.split('/').pop() || `preset_audio_${Date.now()}.wav`
+      const fileName = `${Date.now()}_${selectedPresetAudio.split('/').pop()}`;
+      const filePath = `reference/${userId}/${fileName}`;
       
       // Supabase Storage에 업로드
-      const filePath = `reference/${userId}/${fileName}`
       const { error } = await supabase.storage
         .from('prototype')
         .upload(filePath, blob, {
           cacheControl: '3600',
-          upsert: false
+          upsert: true // 반드시 true로!
         })
       
       if (error) {
