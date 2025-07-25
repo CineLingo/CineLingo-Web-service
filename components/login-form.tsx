@@ -40,7 +40,7 @@ export function LoginForm({
       });
       if (error) throw error;
       // 로그인 후 실제 서비스 페이지로 리다이렉트
-      router.push("/upload");
+      router.push("/");
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");
     } finally {
