@@ -119,8 +119,12 @@ const ProfileAvatarUploader: React.FC<ProfileAvatarUploaderProps> = ({
       } else {
         setError('업로드는 성공했으나 URL을 가져오지 못했습니다.')
       }
-    } catch (err: any) {
-      setError('알 수 없는 오류: ' + (err?.message || ''))
+    } catch (err) {
+      if (err instanceof Error) {
+        setError('알 수 없는 오류: ' + err.message)
+      } else {
+        setError('알 수 없는 오류')
+      }
     }
     setLoading(false)
   }
