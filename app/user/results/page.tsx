@@ -326,7 +326,7 @@ export default function UserResultsPage() {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                  <span className="text-lg sm:text-2xl font-semibold text-gray-900 dark:text-gray-100">
                     {profile?.display_name || '닉네임 없음'}
                   </span>
                   <Button onClick={() => setEditMode(true)} size="sm" variant="outline">
@@ -408,7 +408,7 @@ export default function UserResultsPage() {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                  <span className="text-lg sm:text-2xl font-semibold text-gray-900 dark:text-gray-100">
                     {profile?.display_name || '닉네임 없음'}
                   </span>
                   <Button onClick={() => setEditMode(true)} size="sm" variant="outline">
