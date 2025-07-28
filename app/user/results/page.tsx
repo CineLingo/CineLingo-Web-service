@@ -33,6 +33,7 @@ export default function UserResultsPage() {
   const [editName, setEditName] = useState('')
   const [editMode, setEditMode] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [nameError, setNameError] = useState<string | null>(null);
 
   // 로그인한 사용자 정보 가져오기
   useEffect(() => {
@@ -227,18 +228,23 @@ export default function UserResultsPage() {
 
   // 닉네임 저장
   const handleSaveName = async () => {
-    if (!userId) return
-    setSaving(true)
+    if (!userId) return;
+    if (editName.length > 15) {
+      setNameError('닉네임은 15자 이하로 입력해주세요.');
+      return;
+    }
+    setNameError(null);
+    setSaving(true);
     const { error } = await supabase
       .from('profiles')
       .update({ display_name: editName })
-      .eq('id', userId)
+      .eq('id', userId);
     if (!error) {
-      setProfile((prev) => prev ? { ...prev, display_name: editName } : prev)
-      setEditMode(false)
+      setProfile((prev) => prev ? { ...prev, display_name: editName } : prev);
+      setEditMode(false);
     }
-    setSaving(false)
-  }
+    setSaving(false);
+  };
 
   // 아바타 업로드 후 URL 저장
   const handleAvatarUploaded = async (publicUrl: string) => {
@@ -298,19 +304,25 @@ export default function UserResultsPage() {
           ) : (
             <>
               {editMode ? (
-                <div className="flex gap-2 w-full">
-                  <Input
-                    value={editName}
-                    onChange={e => setEditName(e.target.value)}
-                    className="flex-1"
-                    maxLength={20}
-                  />
-                  <Button onClick={handleSaveName} disabled={saving || !editName.trim()} size="sm">
-                    저장
-                  </Button>
-                  <Button onClick={() => setEditMode(false)} variant="secondary" size="sm">
-                    취소
-                  </Button>
+                <div className="flex flex-col gap-1 w-full">
+                  <span className="text-gray-500 text-sm mb-1">닉네임은 15자 이하로 입력할 수 있습니다.</span>
+                  <div className="flex gap-2 w-full">
+                    <Input
+                      value={editName}
+                      onChange={e => setEditName(e.target.value)}
+                      className="flex-1"
+                      maxLength={15}
+                    />
+                    <Button onClick={handleSaveName} disabled={saving || !editName.trim()} size="sm">
+                      저장
+                    </Button>
+                    <Button onClick={() => { setEditMode(false); setNameError(null); }} variant="secondary" size="sm">
+                      취소
+                    </Button>
+                  </div>
+                  {nameError && (
+                    <span className="text-red-500 text-xs mt-1">{nameError}</span>
+                  )}
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
@@ -374,19 +386,25 @@ export default function UserResultsPage() {
           ) : (
             <>
               {editMode ? (
-                <div className="flex gap-2 w-full">
-                  <Input
-                    value={editName}
-                    onChange={e => setEditName(e.target.value)}
-                    className="flex-1"
-                    maxLength={20}
-                  />
-                  <Button onClick={handleSaveName} disabled={saving || !editName.trim()} size="sm">
-                    저장
-                  </Button>
-                  <Button onClick={() => setEditMode(false)} variant="secondary" size="sm">
-                    취소
-                  </Button>
+                <div className="flex flex-col gap-1 w-full">
+                  <span className="text-gray-500 text-sm mb-1">닉네임은 15자 이하로 입력할 수 있습니다.</span>
+                  <div className="flex gap-2 w-full">
+                    <Input
+                      value={editName}
+                      onChange={e => setEditName(e.target.value)}
+                      className="flex-1"
+                      maxLength={15}
+                    />
+                    <Button onClick={handleSaveName} disabled={saving || !editName.trim()} size="sm">
+                      저장
+                    </Button>
+                    <Button onClick={() => { setEditMode(false); setNameError(null); }} variant="secondary" size="sm">
+                      취소
+                    </Button>
+                  </div>
+                  {nameError && (
+                    <span className="text-red-500 text-xs mt-1">{nameError}</span>
+                  )}
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
