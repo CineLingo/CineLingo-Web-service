@@ -7,6 +7,9 @@ import Link from 'next/link'
 import HomeButton from '@/components/home-button'
 import AudioPlayer from '@/components/AudioPlayer'
 import ShareButton from '@/components/ShareButton'
+import ProfileAvatarUploader from '@/components/ProfileAvatarUploader'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 
 type TTSRequestRow = {
   tts_id: string
@@ -25,6 +28,11 @@ export default function UserResultsPage() {
   const [showTextModal, setShowTextModal] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const supabase = createClient()
+  const [profile, setProfile] = useState<{ display_name: string; avatar_url: string } | null>(null)
+  const [profileLoading, setProfileLoading] = useState(true)
+  const [editName, setEditName] = useState('')
+  const [editMode, setEditMode] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   // 로그인한 사용자 정보 가져오기
   useEffect(() => {
@@ -198,6 +206,54 @@ export default function UserResultsPage() {
     return words.slice(0, maxWords).join(' ') + '...'
   }
 
+  // 프로필 정보 불러오기
+  useEffect(() => {
+    if (!userId) return;
+    const fetchProfile = async () => {
+      setProfileLoading(true);
+      const { data } = await supabase
+        .from('profiles')
+        .select('display_name, avatar_url')
+        .eq('id', userId)
+        .single();
+      if (data) {
+        setProfile(data);
+        setEditName(prev => editMode ? prev : (data.display_name || ''));
+      }
+      setProfileLoading(false);
+    };
+    fetchProfile();
+  }, [userId]);
+
+  // 닉네임 저장
+  const handleSaveName = async () => {
+    if (!userId) return
+    setSaving(true)
+    const { error } = await supabase
+      .from('profiles')
+      .update({ display_name: editName })
+      .eq('id', userId)
+    if (!error) {
+      setProfile((prev) => prev ? { ...prev, display_name: editName } : prev)
+      setEditMode(false)
+    }
+    setSaving(false)
+  }
+
+  // 아바타 업로드 후 URL 저장
+  const handleAvatarUploaded = async (publicUrl: string) => {
+    if (!userId) return
+    setSaving(true)
+    const { error } = await supabase
+      .from('profiles')
+      .update({ avatar_url: publicUrl })
+      .eq('id', userId)
+    if (!error) {
+      setProfile((prev) => prev ? { ...prev, avatar_url: publicUrl } : prev)
+    }
+    setSaving(false)
+  }
+
   if (loading) return (
     <div className="max-w-4xl mx-auto mt-4 sm:mt-8 p-4 sm:p-8">
       <div className="text-center">
@@ -209,7 +265,67 @@ export default function UserResultsPage() {
 
   if (!rows.length) return (
     <div className="max-w-4xl mx-auto mt-4 sm:mt-8 p-4 sm:p-8">
-      <HomeButton variant="floating" />
+      {/* 헤더 영역 */}
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
+        <div className="flex items-center gap-4">
+          <HomeButton variant="minimal" />
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">보이스북</h1>
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={refreshing}
+          className="flex items-center gap-2 px-3 py-2 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          title="새로고침"
+        >
+          <RefreshCw 
+            size={16} 
+            className={`${refreshing ? 'animate-spin' : ''}`} 
+          />
+          <span className="hidden sm:inline text-sm">새로고침</span>
+        </button>
+      </div>
+      {/* 프로필 영역 */}
+      <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8 mb-8">
+        <ProfileAvatarUploader
+          bucketName="avatars"
+          path={userId ? userId : ''}
+          avatarUrl={profile?.avatar_url ? `${profile.avatar_url}?t=${Date.now()}` : undefined}
+          onAvatarUploaded={handleAvatarUploaded}
+        />
+        <div className="flex flex-col items-center sm:items-start gap-2 w-full max-w-xs">
+          {profileLoading ? (
+            <div className="text-gray-500 text-sm">프로필 로딩 중...</div>
+          ) : (
+            <>
+              {editMode ? (
+                <div className="flex gap-2 w-full">
+                  <Input
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                    className="flex-1"
+                    maxLength={20}
+                  />
+                  <Button onClick={handleSaveName} disabled={saving || !editName.trim()} size="sm">
+                    저장
+                  </Button>
+                  <Button onClick={() => setEditMode(false)} variant="secondary" size="sm">
+                    취소
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                    {profile?.display_name || '닉네임 없음'}
+                  </span>
+                  <Button onClick={() => setEditMode(true)} size="sm" variant="outline">
+                    수정
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
       <div className="text-center">
         <h1 className="text-xl sm:text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">보이스북</h1>
         <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">아직 TTS 요청이 없습니다.</p>
@@ -244,7 +360,49 @@ export default function UserResultsPage() {
           <span className="hidden sm:inline text-sm">새로고침</span>
         </button>
       </div>
-      
+      {/* 프로필 영역 */}
+      <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8 mb-8">
+        <ProfileAvatarUploader
+          bucketName="avatars"
+          path={userId ? userId : ''}
+          avatarUrl={profile?.avatar_url ? `${profile.avatar_url}?t=${Date.now()}` : undefined}
+          onAvatarUploaded={handleAvatarUploaded}
+        />
+        <div className="flex flex-col items-center sm:items-start gap-2 w-full max-w-xs">
+          {profileLoading ? (
+            <div className="text-gray-500 text-sm">프로필 로딩 중...</div>
+          ) : (
+            <>
+              {editMode ? (
+                <div className="flex gap-2 w-full">
+                  <Input
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                    className="flex-1"
+                    maxLength={20}
+                  />
+                  <Button onClick={handleSaveName} disabled={saving || !editName.trim()} size="sm">
+                    저장
+                  </Button>
+                  <Button onClick={() => setEditMode(false)} variant="secondary" size="sm">
+                    취소
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+                    {profile?.display_name || '닉네임 없음'}
+                  </span>
+                  <Button onClick={() => setEditMode(true)} size="sm" variant="outline">
+                    수정
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+      {/* 기존 TTS 결과 리스트 렌더링 부분은 그대로 유지 */}
       <div className="grid gap-3 sm:gap-4">
                  {rows.map((row, i) => {
            const statusInfo = getStatusInfo(row.status)
