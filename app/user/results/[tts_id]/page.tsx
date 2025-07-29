@@ -310,7 +310,14 @@ export default function TTSResultDetailPage() {
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
-                    onClick={() => handleDownload(ttsRequest.ref_voices?.[0]?.ref_file_url!, `tts-generated-${ttsRequest.request_id}.mp3`)}
+                    onClick={() => {
+                      const url = ttsRequest.ref_voices?.[0]?.ref_file_url;
+                      if (url) {
+                        handleDownload(url, `tts-generated-${ttsRequest.request_id}.mp3`);
+                      } else {
+                        alert('음성 파일 URL을 찾을 수 없습니다.');
+                      }
+                    }}
                     className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-all duration-300 text-sm font-medium touch-manipulation"
                   >
                     <Download size={16} />

@@ -83,7 +83,6 @@ const FileUploadDemo = () => {
   
   // account_id, ref_id를 받아오는 상태 추가
   const [accountId, setAccountId] = useState<string | null>(null)
-  const [refId, setRefId] = useState<string | null>(null)
   
   const supabase = createClient()
   const router = useRouter()
@@ -457,7 +456,7 @@ const FileUploadDemo = () => {
         setIsProcessing(false)
         return
       }
-      setRefId(ref_id)
+      // setRefId(ref_id) // 이 부분은 이제 사용되지 않으므로 제거
 
       // tts_requests에 insert
       const { data: insertData, error } = await supabase
@@ -584,7 +583,7 @@ const FileUploadDemo = () => {
         setIsProcessing(false)
         return
       }
-      setRefId(ref_id)
+      // setRefId(ref_id) // 이 부분은 이제 사용되지 않으므로 제거
 
       // 4단계: tts_requests 테이블에 INSERT
       const { data: insertData, error } = await supabase
@@ -677,7 +676,7 @@ const FileUploadDemo = () => {
       setErrorMessage('TTS 처리 중 오류가 발생했습니다.')
       setIsProcessing(false)
     }
-  }, [accountId, recordedAudioBlob, gen_text, uploadRecordedAudio, supabase, router])
+  }, [accountId, recordedAudioBlob, gen_text, uploadRecordedAudio, supabase, router, uploadReferenceAudioAndGetRefId])
 
   // 미리 선택된 오디오로 TTS 시작하는 함수
   const startTTSWithPresetAudio = useCallback(async () => {
@@ -715,7 +714,7 @@ const FileUploadDemo = () => {
         setIsProcessing(false)
         return
       }
-      setRefId(ref_id)
+      // setRefId(ref_id) // 이 부분은 이제 사용되지 않으므로 제거
 
       // 4단계: tts_requests 테이블에 INSERT
       const { data: insertData, error } = await supabase
@@ -807,7 +806,7 @@ const FileUploadDemo = () => {
       setErrorMessage('TTS 처리 중 오류가 발생했습니다.')
       setIsProcessing(false)
     }
-  }, [accountId, selectedPresetAudio, gen_text, uploadPresetAudio, supabase, router])
+  }, [accountId, selectedPresetAudio, gen_text, uploadPresetAudio, supabase, router, uploadReferenceAudioAndGetRefId])
 
   const props = useSupabaseUpload({
     bucketName: 'prototype',
