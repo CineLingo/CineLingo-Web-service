@@ -84,6 +84,10 @@ const FileUploadDemo = () => {
   // account_id, ref_id를 받아오는 상태 추가
   const [accountId, setAccountId] = useState<string | null>(null)
   
+  // 이전에 사용한 음성 리스트 상태 및 표시 여부 상태 추가
+  const [usedAudioFiles, setUsedAudioFiles] = useState<Array<{ name: string; file: string }>>([])
+  const [showUsedAudioList, setShowUsedAudioList] = useState(false)
+  
   const supabase = createClient()
   const router = useRouter()
 
@@ -808,6 +812,63 @@ const FileUploadDemo = () => {
     }
   }, [accountId, selectedPresetAudio, gen_text, uploadPresetAudio, supabase, router, uploadReferenceAudioAndGetRefId])
 
+  // 이전에 사용한 음성 목록 불러오기 함수
+  const fetchUsedAudioFiles = useCallback(async () => {
+    if (!userId) return;
+    try {
+      const { data, error } = await supabase.storage.from('prototype').list(`reference/${userId}/`, {
+        limit: 100,
+        offset: 0,
+        sortBy: { column: 'name', order: 'desc' },
+      });
+      if (error) {
+        setErrorMessage('이전에 사용한 음성 목록을 불러오지 못했습니다.');
+        return;
+      }
+      if (data) {
+        const files = data
+          .filter((item: any) => item.name.endsWith('.wav') || item.name.endsWith('.webm'))
+          .map((item: any) => ({
+            name: item.name,
+            file: `/reference/${userId}/${item.name}`,
+          }));
+        setUsedAudioFiles(files);
+      }
+    } catch (e) {
+      setErrorMessage('이전에 사용한 음성 목록을 불러오는 중 오류가 발생했습니다.');
+    }
+  }, [userId, supabase]);
+
+  // 이전에 사용한 음성 선택 핸들러 (signed URL 적용)
+  const handleUsedAudioSelect = useCallback(async (audioFile: string) => {
+    // signed URL 발급
+    const filePath = audioFile.startsWith('/reference/')
+      ? audioFile.replace('/reference/', 'reference/')
+      : audioFile;
+    const { data, error } = await supabase.storage
+      .from('prototype')
+      .createSignedUrl(filePath, 60 * 60 * 24 * 30); // 30일
+
+    if (error || !data?.signedUrl) {
+      setErrorMessage('오디오 파일을 불러오지 못했습니다.');
+      return;
+    }
+
+    setSelectedPresetAudio(audioFile);
+    setAudioUrl(data.signedUrl);
+    setShowPreview(true);
+    setCurrentStep('preview');
+    const audio = new Audio(data.signedUrl);
+    setAudioElement(audio);
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+    setRecordedAudioBlob(null);
+    setAudioChunks([]);
+    setRecordingTime(0);
+    setShowUsedAudioList(false);
+  }, [supabase]);
+
   const props = useSupabaseUpload({
     bucketName: 'prototype',
     path: userId ? `reference/${userId}` : undefined,
@@ -1040,6 +1101,49 @@ const FileUploadDemo = () => {
                   </div>
                 )}
               </div>
+
+              {/* 이전에 사용한 음성 선택 버튼 */}
+              <button
+                onClick={async () => {
+                  if (!showUsedAudioList) await fetchUsedAudioFiles();
+                  setShowUsedAudioList(!showUsedAudioList);
+                }}
+                className="w-full mt-3 py-3 px-4 bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-lg font-medium hover:from-green-600 hover:to-teal-600 transition-all duration-200 flex items-center justify-center space-x-2 touch-manipulation"
+              >
+                <Music size={18} className="sm:w-5 sm:h-5" />
+                <span className="text-sm sm:text-base">이전에 사용한 음성 선택</span>
+              </button>
+              {showUsedAudioList && (
+                <div className="mt-4 space-y-2 max-h-60 overflow-y-auto">
+                  {usedAudioFiles.length === 0 ? (
+                    <div className="text-xs text-gray-500 dark:text-gray-400">이전에 업로드한 음성이 없습니다.</div>
+                  ) : (
+                    usedAudioFiles.map((audio, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleUsedAudioSelect(audio.file)}
+                        className="w-full p-3 text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-manipulation"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2 sm:space-x-3">
+                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-green-400 to-teal-400 rounded-full flex items-center justify-center">
+                              <Music size={14} className="sm:w-4 sm:h-4 text-white" />
+                            </div>
+                            <div className="text-left flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                {audio.name}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-400 dark:text-gray-500 ml-2">
+                            선택
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
 
               {/* 또는 구분선 */}
               <div className="flex items-center">
