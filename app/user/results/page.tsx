@@ -12,16 +12,17 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 
 type TTSRequestRow = {
-  tts_id: string
-  reference_audio_url: string | null
+  request_id: string
+  reference_id: string | null
   gen_text: string
-  status: 'success' | 'fail' | 'pending' | 'in_progress' | string
-  public_url: string | null
+  status: string
   created_at: string
+  updated_at: string
 }
 
 export default function UserResultsPage() {
   const [userId, setUserId] = useState<string | null>(null)
+  const [accountId, setAccountId] = useState<string | null>(null)
   const [rows, setRows] = useState<TTSRequestRow[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedText, setSelectedText] = useState<string | null>(null)
@@ -39,31 +40,39 @@ export default function UserResultsPage() {
   useEffect(() => {
     const fetchUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (user) setUserId(user.id)
+      if (user) {
+        setUserId(user.id)
+        const { data: mappingData } = await supabase
+          .from('user_to_account_mapping')
+          .select('account_id')
+          .eq('user_id', user.id)
+          .single()
+        if (mappingData) setAccountId(mappingData.account_id)
+      }
     }
     fetchUser()
   }, [supabase])
 
-  // user_id로 모든 TTS 요청 불러오기
+  // account_id로 모든 TTS 요청 불러오기
   const fetchRows = useCallback(async () => {
-    if (!userId) return
+    if (!accountId) return
     const { data } = await supabase
       .from('tts_requests')
-      .select('tts_id, reference_audio_url, gen_text, status, public_url, created_at')
-      .eq('user_id', userId)
+      .select('request_id, reference_id, gen_text, status, created_at, updated_at')
+      .eq('account_id', accountId)
       .order('created_at', { ascending: false })
     setRows((data as TTSRequestRow[]) || [])
     setLoading(false)
     setRefreshing(false)
-  }, [userId, supabase])
+  }, [accountId, supabase])
 
   useEffect(() => {
     fetchRows()
-  }, [userId, supabase, fetchRows])
+  }, [accountId, supabase, fetchRows])
 
   // 자동 새로고침
   useEffect(() => {
-    if (!userId) return;
+    if (!accountId) return;
 
     const channel = supabase
       .channel('custom-all-channel')
@@ -71,7 +80,7 @@ export default function UserResultsPage() {
         event: '*',
         schema: 'public',
         table: 'tts_requests',
-        filter: `user_id=eq.${userId}`
+        filter: `account_id=eq.${accountId}`
       }, () => {
         fetchRows();
       })
@@ -80,7 +89,7 @@ export default function UserResultsPage() {
     return () => {
       supabase.removeChannel(channel);
     }
-  }, [userId, supabase]);
+  }, [accountId, supabase]);
 
   // 새로고침 함수
   const handleRefresh = () => {
@@ -213,13 +222,12 @@ export default function UserResultsPage() {
     const fetchProfile = async () => {
       setProfileLoading(true);
       const { data } = await supabase
-        .from('profiles')
+        .from('users')
         .select('display_name, avatar_url')
-        .eq('id', userId)
+        .eq('user_id', userId)
         .single();
       if (data) {
-        setProfile(data);
-        setEditName(prev => editMode ? prev : (data.display_name || ''));
+        setProfile({ display_name: data.display_name, avatar_url: data.avatar_url });
       }
       setProfileLoading(false);
     };
@@ -233,12 +241,12 @@ export default function UserResultsPage() {
       setNameError('닉네임은 15자 이하로 입력해주세요.');
       return;
     }
-    setNameError(null);
     setSaving(true);
+    setNameError(null);
     const { error } = await supabase
-      .from('profiles')
+      .from('users')
       .update({ display_name: editName })
-      .eq('id', userId);
+      .eq('user_id', userId);
     if (!error) {
       setProfile((prev) => prev ? { ...prev, display_name: editName } : prev);
       setEditMode(false);
@@ -251,9 +259,9 @@ export default function UserResultsPage() {
     if (!userId) return
     setSaving(true)
     const { error } = await supabase
-      .from('profiles')
+      .from('users')
       .update({ avatar_url: publicUrl })
-      .eq('id', userId)
+      .eq('user_id', userId)
     if (!error) {
       setProfile((prev) => prev ? { ...prev, avatar_url: publicUrl } : prev)
     }
@@ -294,7 +302,7 @@ export default function UserResultsPage() {
       <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8 mb-8">
         <ProfileAvatarUploader
           bucketName="avatars"
-          path={userId ? userId : ''}
+          path={accountId ? accountId : ''}
           avatarUrl={profile?.avatar_url ? `${profile.avatar_url}?t=${Date.now()}` : undefined}
           onAvatarUploaded={handleAvatarUploaded}
         />
@@ -376,7 +384,7 @@ export default function UserResultsPage() {
       <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8 mb-8">
         <ProfileAvatarUploader
           bucketName="avatars"
-          path={userId ? userId : ''}
+          path={accountId ? accountId : ''}
           avatarUrl={profile?.avatar_url ? `${profile.avatar_url}?t=${Date.now()}` : undefined}
           onAvatarUploaded={handleAvatarUploaded}
         />
@@ -427,7 +435,7 @@ export default function UserResultsPage() {
            
            return (
              <div 
-               key={row.tts_id} 
+               key={row.request_id} 
                className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4 transition-all duration-300 hover:bg-gray-50 dark:hover:bg-gray-800"
              >
               {/* 요청 시간 */}
@@ -450,10 +458,10 @@ export default function UserResultsPage() {
 
               {/* 플레이 바 & 재생시간 */}
               <div className="mb-3 sm:mb-4">
-                                 {row.public_url ? (
+                                 {row.reference_id ? (
                    <div className="w-full">
                      <AudioPlayer 
-                       audioUrl={row.public_url} 
+                       audioUrl={`${row.reference_id}?t=${Date.now()}`} 
                        width={isMobile ? 350 : 400} 
                        height={isMobile ? 60 : 50}
                      />
@@ -468,9 +476,9 @@ export default function UserResultsPage() {
 
               {/* 버튼 영역 */}
               <div className="flex items-center justify-between gap-2">
-                {row.status === 'success' && row.public_url ? (
+                {row.status === 'success' && row.reference_id ? (
                   <button
-                    onClick={() => handleDownload(row.public_url!, `tts-generated-${i + 1}.mp3`)}
+                    onClick={() => handleDownload(row.reference_id!, `tts-generated-${i + 1}.mp3`)}
                     className="flex-1 h-12 sm:h-11 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm rounded-lg transition-colors"
                     title="음성 파일 다운로드"
                   >
@@ -489,7 +497,7 @@ export default function UserResultsPage() {
                 {/* 공유 버튼 (성공한 결과만) */}
                 {row.status === 'success' && (
                   <ShareButton
-                    ttsId={row.tts_id}
+                    ttsId={row.request_id}
                     text=""
                     variant="ghost"
                     size="sm"
@@ -498,7 +506,7 @@ export default function UserResultsPage() {
                 )}
                 
                 <Link
-                  href={`/user/results/${row.tts_id}`}
+                  href={`/user/results/${row.request_id}`}
                   className="h-12 w-12 sm:h-11 sm:w-11 flex items-center justify-center bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded-lg transition-colors"
                   title="상세 보기"
                 >

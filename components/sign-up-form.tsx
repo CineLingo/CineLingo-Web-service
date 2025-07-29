@@ -54,6 +54,32 @@ export function SignUpForm({
         },
       });
       if (error) throw error;
+
+      // 회원가입 성공 후 users, accounts, user_to_account_mapping 테이블에 insert
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData?.user) {
+        // users 테이블에 insert
+        await supabase.from('users').insert({
+          user_id: userData.user.id,
+          email: userData.user.email,
+          display_name: '', // 필요시 입력값 추가
+          avatar_url: '',
+          auth_provider: true,
+        });
+        // accounts 테이블에 insert
+        const { data: accountData } = await supabase.from('accounts').insert({
+          email: userData.user.email,
+          name: '', // 필요시 입력값 추가
+          balance: 0,
+        }).select('account_id').single();
+        // user_to_account_mapping 테이블에 insert
+        if (accountData?.account_id) {
+          await supabase.from('user_to_account_mapping').insert({
+            user_id: userData.user.id,
+            account_id: accountData.account_id,
+          });
+        }
+      }
       router.push("/auth/sign-up-success");
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "An error occurred");

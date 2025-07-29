@@ -9,18 +9,19 @@ import HomeButton from '@/components/home-button'
 import ShareButton from '@/components/ShareButton'
 
 type TTSRequestDetail = {
-  tts_id: string
-  user_id: string
-  reference_audio_url: string | null
+  request_id: string
+  account_id: string
+  reference_id: string | null
   gen_text: string
-  status: 'success' | 'fail' | 'pending' | 'in_progress' | string
-  public_url: string | null
+  status: string
   created_at: string
+  updated_at: string
   error_message?: string
+  ref_voices?: { ref_file_url: string }[]
 }
 
 export default function TTSResultDetailPage() {
-  const [userId, setUserId] = useState<string | null>(null)
+  const [accountId, setAccountId] = useState<string | null>(null)
   const [ttsRequest, setTtsRequest] = useState<TTSRequestDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -32,37 +33,41 @@ export default function TTSResultDetailPage() {
   useEffect(() => {
     const fetchUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
-      if (user) setUserId(user.id)
+      if (user) {
+        const { data: mappingData } = await supabase
+          .from('user_to_account_mapping')
+          .select('account_id')
+          .eq('user_id', user.id)
+          .single()
+        if (mappingData) setAccountId(mappingData.account_id)
+      }
     }
     fetchUser()
   }, [supabase])
 
   const fetchTTSRequest = useCallback(async () => {
-    if (!userId || !ttsId) return
-
+    if (!accountId || !ttsId) return
+    // ref_voices join 예시
     const { data, error } = await supabase
       .from('tts_requests')
-      .select('*')
-      .eq('tts_id', ttsId)
-      .eq('user_id', userId)
+      .select('request_id, account_id, reference_id, gen_text:input_text, status, created_at, updated_at, error_message, ref_voices(ref_file_url)')
+      .eq('request_id', ttsId)
+      .eq('account_id', accountId)
       .single()
-
     if (error) {
       console.error('Error fetching TTS request:', error)
       setError('TTS 요청을 찾을 수 없습니다.')
       setLoading(false)
       return
     }
-
     if (!data) {
       setError('TTS 요청을 찾을 수 없습니다.')
       setLoading(false)
       return
     }
-
     setTtsRequest(data as TTSRequestDetail)
     setLoading(false)
-  }, [userId, ttsId, supabase])
+  }, [accountId, ttsId, supabase])
 
   // 특정 TTS 요청 불러오기
   useEffect(() => {
@@ -71,19 +76,17 @@ export default function TTSResultDetailPage() {
 
   // 자동 새로고침
   useEffect(() => {
-    if (!userId || !ttsId) return
-
+    if (!accountId || !ttsId) return
     const channel = supabase
       .channel(`tts-request-detail-${ttsId}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tts_requests', filter: `tts_id=eq.${ttsId}` }, () => {
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tts_requests', filter: `request_id=eq.${ttsId}` }, () => {
         fetchTTSRequest()
       })
       .subscribe()
-
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [userId, ttsId, supabase, fetchTTSRequest])
+  }, [accountId, ttsId, supabase, fetchTTSRequest])
 
   // 다운로드 함수
   const handleDownload = async (url: string, filename?: string) => {
@@ -278,13 +281,13 @@ export default function TTSResultDetailPage() {
           </div>
 
           {/* 참조 오디오 */}
-          {ttsRequest.reference_audio_url && (
+          {ttsRequest.reference_id && (
             <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">참조 오디오</h2>
               <div className="w-full">
                 <audio 
                   controls 
-                  src={ttsRequest.reference_audio_url} 
+                  src={ttsRequest.reference_id} 
                   className="w-full h-12 sm:h-14"
                   preload="metadata"
                 />
@@ -295,26 +298,26 @@ export default function TTSResultDetailPage() {
           {/* 생성된 음성 */}
           <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">생성된 음성</h2>
-            {ttsRequest.public_url ? (
+            {ttsRequest.ref_voices && ttsRequest.ref_voices.length > 0 ? (
               <div className="space-y-4">
                 <div className="w-full">
                   <audio 
                     controls 
-                    src={ttsRequest.public_url} 
+                    src={ttsRequest.ref_voices[0].ref_file_url} 
                     className="w-full h-12 sm:h-14"
                     preload="metadata"
                   />
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
-                    onClick={() => handleDownload(ttsRequest.public_url!, `tts-generated-${ttsRequest.tts_id}.mp3`)}
+                    onClick={() => handleDownload(ttsRequest.ref_voices?.[0]?.ref_file_url!, `tts-generated-${ttsRequest.request_id}.mp3`)}
                     className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-all duration-300 text-sm font-medium touch-manipulation"
                   >
                     <Download size={16} />
                     음성 파일 다운로드
                   </button>
                   <ShareButton 
-                    ttsId={ttsRequest.tts_id}
+                    ttsId={ttsRequest.request_id}
                     text="공유하기"
                     variant="outline"
                     size="md"

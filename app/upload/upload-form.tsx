@@ -81,6 +81,10 @@ const FileUploadDemo = () => {
   // 텍스트 예시 관련 상태
   const [showTextExamples, setShowTextExamples] = useState(false)
   
+  // account_id, ref_id를 받아오는 상태 추가
+  const [accountId, setAccountId] = useState<string | null>(null)
+  const [refId, setRefId] = useState<string | null>(null)
+  
   const supabase = createClient()
   const router = useRouter()
 
@@ -89,6 +93,7 @@ const FileUploadDemo = () => {
     audioUrlRef.current = audioUrl
   }, [audioUrl])
 
+  // 로그인한 사용자 정보 가져오기 및 account_id 매핑
   useEffect(() => {
     const fetchUser = async () => {
       const {
@@ -96,6 +101,12 @@ const FileUploadDemo = () => {
       } = await supabase.auth.getUser()
       if (user) {
         setUserId(user.id)
+        const { data: mappingData } = await supabase
+          .from('user_to_account_mapping')
+          .select('account_id')
+          .eq('user_id', user.id)
+          .single()
+        if (mappingData) setAccountId(mappingData.account_id)
       }
     }
     fetchUser()
@@ -394,17 +405,38 @@ const FileUploadDemo = () => {
     }
   }, [recordedAudioBlob, userId, supabase])
 
+  // ref_voices에 오디오 업로드 후 ref_id 받아오기 (예시)
+  const uploadReferenceAudioAndGetRefId = async (filePath: string, signedUrl: string) => {
+    if (!accountId) return null;
+    // ref_voices에 insert
+    const { data, error } = await supabase
+      .from('ref_voices')
+      .insert({
+        account_id: accountId,
+        ref_file_url: signedUrl,
+        ref_file_path: filePath,
+        is_public: false,
+      })
+      .select('ref_id')
+      .single();
+    if (error) {
+      setErrorMessage('참조 오디오 등록에 실패했습니다.');
+      return null;
+    }
+    return data.ref_id;
+  }
+
   // 업로드 성공 시 tts_requests에 행 삽입 + TTS Runner 호출 + 페이지 이동
   const onUploadSuccess = useCallback(
     async (uploadedFileUrls: string[]) => {
-      if (!userId || uploadedFileUrls.length === 0) return
+      if (!accountId || uploadedFileUrls.length === 0) return
       
       setIsProcessing(true)
       setErrorMessage('')
 
       const filePath = uploadedFileUrls[0]
 
-      // 1달(2592000초)짜리 signed URL 생성
+      // signed URL 생성
       const { data, error: urlError } = await supabase
         .storage
         .from('prototype')
@@ -419,17 +451,24 @@ const FileUploadDemo = () => {
 
       const signedUrl = data.signedUrl
 
-      // 1단계: tts_requests 테이블에 INSERT
+      // ref_voices에 insert 후 ref_id 받아오기
+      const ref_id = await uploadReferenceAudioAndGetRefId(filePath, signedUrl)
+      if (!ref_id) {
+        setIsProcessing(false)
+        return
+      }
+      setRefId(ref_id)
+
+      // tts_requests에 insert
       const { data: insertData, error } = await supabase
         .from('tts_requests')
         .insert({
-          user_id: userId,
-          reference_audio_storage_path: filePath,
-          reference_audio_url: signedUrl,
-          gen_text: gen_text,
+          account_id: accountId,
+          reference_id: ref_id,
+          input_text: gen_text,
           status: 'pending',
         })
-        .select('tts_id')
+        .select('request_id')
         .single()
 
       if (error) {
@@ -439,8 +478,8 @@ const FileUploadDemo = () => {
         return
       }
 
-      if (!insertData?.tts_id) {
-        console.error('No tts_id returned from insert')
+      if (!insertData?.request_id) {
+        console.error('No request_id returned from insert')
         setErrorMessage('TTS ID 생성에 실패했습니다.')
         setIsProcessing(false)
         return
@@ -450,18 +489,18 @@ const FileUploadDemo = () => {
       try {
         console.log('Calling TTS Runner Edge Function...')
         console.log('Request payload:', {
-          tts_id: insertData.tts_id,
+          request_id: insertData.request_id,
           reference_audio_url: signedUrl,
           gen_text: gen_text,
-          user_id: userId
+          account_id: accountId
         })
         
         const { data: functionData, error: functionError } = await supabase.functions.invoke('tts-runner', {
           body: {
-            tts_id: insertData.tts_id,
+            request_id: insertData.request_id,
             reference_audio_url: signedUrl,
             gen_text: gen_text,
-            user_id: userId
+            account_id: accountId
           }
         })
 
@@ -481,14 +520,14 @@ const FileUploadDemo = () => {
               status: 'fail',
               error_message: `Edge Function Error: ${functionError.message}`
             })
-            .eq('tts_id', insertData.tts_id)
+            .eq('request_id', insertData.request_id)
         } else {
           console.log('TTS Runner called successfully:', functionData)
           // 성공적으로 호출되면 상태를 'in_progress'로 업데이트
           await supabase
             .from('tts_requests')
             .update({ status: 'in_progress' })
-            .eq('tts_id', insertData.tts_id)
+            .eq('request_id', insertData.request_id)
         }
       } catch (functionError) {
         console.error('Error calling TTS Runner function:', functionError)
@@ -500,18 +539,18 @@ const FileUploadDemo = () => {
             status: 'fail',
             error_message: `Exception: ${functionError instanceof Error ? functionError.message : 'Unknown error'}`
           })
-          .eq('tts_id', insertData.tts_id)
+          .eq('request_id', insertData.request_id)
       }
 
       // 3단계: 결과 목록 페이지로 이동
       router.push(`/user/results`)
     },
-    [userId, gen_text, supabase, router]
+    [accountId, gen_text, supabase, router]
   )
 
   // 녹음된 오디오로 TTS 시작하는 함수
   const startTTSWithRecordedAudio = useCallback(async () => {
-    if (!userId || !recordedAudioBlob || !gen_text.trim()) return
+    if (!accountId || !recordedAudioBlob || !gen_text.trim()) return
     
     setIsProcessing(true)
     setErrorMessage('')
@@ -539,17 +578,24 @@ const FileUploadDemo = () => {
 
       const signedUrl = data.signedUrl
 
-      // 3단계: tts_requests 테이블에 INSERT
+      // 3단계: ref_voices에 insert 후 ref_id 받아오기
+      const ref_id = await uploadReferenceAudioAndGetRefId(filePath, signedUrl)
+      if (!ref_id) {
+        setIsProcessing(false)
+        return
+      }
+      setRefId(ref_id)
+
+      // 4단계: tts_requests 테이블에 INSERT
       const { data: insertData, error } = await supabase
         .from('tts_requests')
         .insert({
-          user_id: userId,
-          reference_audio_storage_path: filePath,
-          reference_audio_url: signedUrl,
-          gen_text: gen_text,
+          account_id: accountId,
+          reference_id: ref_id,
+          input_text: gen_text,
           status: 'pending',
         })
-        .select('tts_id')
+        .select('request_id')
         .single()
 
       if (error) {
@@ -559,29 +605,29 @@ const FileUploadDemo = () => {
         return
       }
 
-      if (!insertData?.tts_id) {
-        console.error('No tts_id returned from insert')
+      if (!insertData?.request_id) {
+        console.error('No request_id returned from insert')
         setErrorMessage('TTS ID 생성에 실패했습니다.')
         setIsProcessing(false)
         return
       }
 
-      // 4단계: TTS Runner Edge Function 호출
+      // 5단계: TTS Runner Edge Function 호출
       try {
         console.log('Calling TTS Runner Edge Function with recorded audio...')
         console.log('Request payload:', {
-          tts_id: insertData.tts_id,
+          request_id: insertData.request_id,
           reference_audio_url: signedUrl,
           gen_text: gen_text,
-          user_id: userId
+          account_id: accountId
         })
         
         const { data: functionData, error: functionError } = await supabase.functions.invoke('tts-runner', {
           body: {
-            tts_id: insertData.tts_id,
+            request_id: insertData.request_id,
             reference_audio_url: signedUrl,
             gen_text: gen_text,
-            user_id: userId
+            account_id: accountId
           }
         })
 
@@ -601,14 +647,14 @@ const FileUploadDemo = () => {
               status: 'fail',
               error_message: `Edge Function Error: ${functionError.message}`
             })
-            .eq('tts_id', insertData.tts_id)
+            .eq('request_id', insertData.request_id)
         } else {
           console.log('TTS Runner called successfully:', functionData)
           // 성공적으로 호출되면 상태를 'in_progress'로 업데이트
           await supabase
             .from('tts_requests')
             .update({ status: 'in_progress' })
-            .eq('tts_id', insertData.tts_id)
+            .eq('request_id', insertData.request_id)
         }
       } catch (functionError) {
         console.error('Error calling TTS Runner function:', functionError)
@@ -620,10 +666,10 @@ const FileUploadDemo = () => {
             status: 'fail',
             error_message: `Exception: ${functionError instanceof Error ? functionError.message : 'Unknown error'}`
           })
-          .eq('tts_id', insertData.tts_id)
+          .eq('request_id', insertData.request_id)
       }
 
-      // 5단계: 결과 목록 페이지로 이동
+      // 6단계: 결과 목록 페이지로 이동
       router.push(`/user/results`)
       
     } catch (error) {
@@ -631,11 +677,11 @@ const FileUploadDemo = () => {
       setErrorMessage('TTS 처리 중 오류가 발생했습니다.')
       setIsProcessing(false)
     }
-  }, [userId, recordedAudioBlob, gen_text, uploadRecordedAudio, supabase, router])
+  }, [accountId, recordedAudioBlob, gen_text, uploadRecordedAudio, supabase, router])
 
   // 미리 선택된 오디오로 TTS 시작하는 함수
   const startTTSWithPresetAudio = useCallback(async () => {
-    if (!userId || !selectedPresetAudio || !gen_text.trim()) return
+    if (!accountId || !selectedPresetAudio || !gen_text.trim()) return
     
     setIsProcessing(true)
     setErrorMessage('')
@@ -663,17 +709,24 @@ const FileUploadDemo = () => {
 
       const signedUrl = data.signedUrl
 
-      // 3단계: tts_requests 테이블에 INSERT
+      // 3단계: ref_voices에 insert 후 ref_id 받아오기
+      const ref_id = await uploadReferenceAudioAndGetRefId(filePath, signedUrl)
+      if (!ref_id) {
+        setIsProcessing(false)
+        return
+      }
+      setRefId(ref_id)
+
+      // 4단계: tts_requests 테이블에 INSERT
       const { data: insertData, error } = await supabase
         .from('tts_requests')
         .insert({
-          user_id: userId,
-          reference_audio_storage_path: filePath,
-          reference_audio_url: signedUrl,
-          gen_text: gen_text,
+          account_id: accountId,
+          reference_id: ref_id,
+          input_text: gen_text,
           status: 'pending',
         })
-        .select('tts_id')
+        .select('request_id')
         .single()
 
       if (error) {
@@ -683,29 +736,29 @@ const FileUploadDemo = () => {
         return
       }
 
-      if (!insertData?.tts_id) {
-        console.error('No tts_id returned from insert')
+      if (!insertData?.request_id) {
+        console.error('No request_id returned from insert')
         setErrorMessage('TTS ID 생성에 실패했습니다.')
         setIsProcessing(false)
         return
       }
 
-      // 4단계: TTS Runner Edge Function 호출
+      // 5단계: TTS Runner Edge Function 호출
       try {
         console.log('Calling TTS Runner Edge Function with preset audio...')
         console.log('Request payload:', {
-          tts_id: insertData.tts_id,
+          request_id: insertData.request_id,
           reference_audio_url: signedUrl,
           gen_text: gen_text,
-          user_id: userId
+          account_id: accountId
         })
         
         const { data: functionData, error: functionError } = await supabase.functions.invoke('tts-runner', {
           body: {
-            tts_id: insertData.tts_id,
+            request_id: insertData.request_id,
             reference_audio_url: signedUrl,
             gen_text: gen_text,
-            user_id: userId
+            account_id: accountId
           }
         })
 
@@ -725,14 +778,14 @@ const FileUploadDemo = () => {
               status: 'fail',
               error_message: `Edge Function Error: ${functionError.message}`
             })
-            .eq('tts_id', insertData.tts_id)
+            .eq('request_id', insertData.request_id)
         } else {
           console.log('TTS Runner called successfully:', functionData)
           // 성공적으로 호출되면 상태를 'in_progress'로 업데이트
           await supabase
             .from('tts_requests')
             .update({ status: 'in_progress' })
-            .eq('tts_id', insertData.tts_id)
+            .eq('request_id', insertData.request_id)
         }
       } catch (functionError) {
         console.error('Error calling TTS Runner function:', functionError)
@@ -744,17 +797,17 @@ const FileUploadDemo = () => {
             status: 'fail',
             error_message: `Exception: ${functionError instanceof Error ? functionError.message : 'Unknown error'}`
           })
-          .eq('tts_id', insertData.tts_id)
+          .eq('request_id', insertData.request_id)
       }
 
-      // 5단계: 결과 목록 페이지로 이동
+      // 6단계: 결과 목록 페이지로 이동
       router.push(`/user/results`)
     } catch (error) {
       console.error('TTS 처리 중 오류:', error)
       setErrorMessage('TTS 처리 중 오류가 발생했습니다.')
       setIsProcessing(false)
     }
-  }, [userId, selectedPresetAudio, gen_text, uploadPresetAudio, supabase, router])
+  }, [accountId, selectedPresetAudio, gen_text, uploadPresetAudio, supabase, router])
 
   const props = useSupabaseUpload({
     bucketName: 'prototype',
