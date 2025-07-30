@@ -508,7 +508,7 @@ const FileUploadDemo = () => {
           account_id: accountId
         })
         
-        const { data: functionData, error: functionError } = await supabase.functions.invoke('tts-runner', {
+        const { data: functionData, error: functionError } = await supabase.functions.invoke('rapid-worker', {
           body: {
             reference_id: ref_id,
             reference_audio_url: signedUrl, // signedUrl이 있을 때만
@@ -635,7 +635,7 @@ const FileUploadDemo = () => {
           account_id: accountId
         })
         
-        const { data: functionData, error: functionError } = await supabase.functions.invoke('tts-runner', {
+        const { data: functionData, error: functionError } = await supabase.functions.invoke('rapid-worker', {
           body: {
             reference_id: ref_id,
             reference_audio_url: signedUrl, // signedUrl이 있을 때만
@@ -766,7 +766,7 @@ const FileUploadDemo = () => {
           account_id: accountId
         })
         
-        const { data: functionData, error: functionError } = await supabase.functions.invoke('tts-runner', {
+        const { data: functionData, error: functionError } = await supabase.functions.invoke('rapid-worker', {
           body: {
             reference_id: ref_id,
             reference_audio_url: signedUrl, // signedUrl이 있을 때만
