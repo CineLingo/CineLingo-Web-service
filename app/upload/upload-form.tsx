@@ -492,17 +492,17 @@ const FileUploadDemo = () => {
       try {
         console.log('Calling TTS Runner Edge Function...')
         console.log('Request payload:', {
-          request_id: insertData.request_id,
-          reference_audio_url: signedUrl,
-          gen_text: gen_text,
+          reference_id: ref_id,
+          reference_audio_url: signedUrl, // signedUrl이 있을 때만
+          input_text: gen_text,
           account_id: accountId
         })
         
         const { data: functionData, error: functionError } = await supabase.functions.invoke('tts-runner', {
           body: {
-            request_id: insertData.request_id,
-            reference_audio_url: signedUrl,
-            gen_text: gen_text,
+            reference_id: ref_id,
+            reference_audio_url: signedUrl, // signedUrl이 있을 때만
+            input_text: gen_text,
             account_id: accountId
           }
         })
@@ -619,17 +619,17 @@ const FileUploadDemo = () => {
       try {
         console.log('Calling TTS Runner Edge Function with recorded audio...')
         console.log('Request payload:', {
-          request_id: insertData.request_id,
-          reference_audio_url: signedUrl,
-          gen_text: gen_text,
+          reference_id: ref_id,
+          reference_audio_url: signedUrl, // signedUrl이 있을 때만
+          input_text: gen_text,
           account_id: accountId
         })
         
         const { data: functionData, error: functionError } = await supabase.functions.invoke('tts-runner', {
           body: {
-            request_id: insertData.request_id,
-            reference_audio_url: signedUrl,
-            gen_text: gen_text,
+            reference_id: ref_id,
+            reference_audio_url: signedUrl, // signedUrl이 있을 때만
+            input_text: gen_text,
             account_id: accountId
           }
         })
@@ -750,17 +750,17 @@ const FileUploadDemo = () => {
       try {
         console.log('Calling TTS Runner Edge Function with preset audio...')
         console.log('Request payload:', {
-          request_id: insertData.request_id,
-          reference_audio_url: signedUrl,
-          gen_text: gen_text,
+          reference_id: ref_id,
+          reference_audio_url: signedUrl, // signedUrl이 있을 때만
+          input_text: gen_text,
           account_id: accountId
         })
         
         const { data: functionData, error: functionError } = await supabase.functions.invoke('tts-runner', {
           body: {
-            request_id: insertData.request_id,
-            reference_audio_url: signedUrl,
-            gen_text: gen_text,
+            reference_id: ref_id,
+            reference_audio_url: signedUrl, // signedUrl이 있을 때만
+            input_text: gen_text,
             account_id: accountId
           }
         })
