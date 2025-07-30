@@ -7,6 +7,16 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Play, Pause, Mic, Square, RotateCcw, Music } from 'lucide-react'
 
+// Supabase Storage list 반환 객체 타입 정의
+type StorageObject = {
+  name: string;
+  id: string;
+  updated_at: string;
+  created_at: string;
+  last_accessed_at: string;
+  metadata?: object;
+};
+
   // 미리 업로드된 오디오 파일 목록
   const PRESET_AUDIO_FILES = [
     { name: '유재석 참고음성', file: '/yoojaeseok_ref1.wav', duration: '약 10초' },
@@ -827,14 +837,14 @@ const FileUploadDemo = () => {
       }
       if (data) {
         const files = data
-          .filter((item: any) => item.name.endsWith('.wav') || item.name.endsWith('.webm'))
-          .map((item: any) => ({
+          .filter((item: StorageObject) => item.name.endsWith('.wav') || item.name.endsWith('.webm'))
+          .map((item: StorageObject) => ({
             name: item.name,
             file: `/reference/${userId}/${item.name}`,
           }));
         setUsedAudioFiles(files);
       }
-    } catch (e) {
+    } catch {
       setErrorMessage('이전에 사용한 음성 목록을 불러오는 중 오류가 발생했습니다.');
     }
   }, [userId, supabase]);
