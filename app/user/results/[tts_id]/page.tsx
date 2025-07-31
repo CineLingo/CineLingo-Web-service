@@ -12,12 +12,13 @@ type TTSRequestDetail = {
   request_id: string
   account_id: string
   reference_id: string | null
-  gen_text: string
+  input_text: string
   status: string
   created_at: string
   updated_at: string
   error_message?: string
   ref_voices?: { ref_file_url: string }[]
+  gen_audios?: { gen_file_url: string; gen_file_path: string }[]
 }
 
 export default function TTSResultDetailPage() {
@@ -47,13 +48,23 @@ export default function TTSResultDetailPage() {
 
   const fetchTTSRequest = useCallback(async () => {
     if (!accountId || !ttsId) return
-    // ref_voices join 예시
+    
     const { data, error } = await supabase
       .from('tts_requests')
-      .select('request_id, account_id, reference_id, gen_text:input_text, status, created_at, updated_at, error_message, ref_voices(ref_file_url)')
+      .select(`
+        request_id, 
+        account_id, 
+        reference_id, 
+        input_text, 
+        status, 
+        created_at, 
+        updated_at, 
+        gen_audios(gen_file_url, gen_file_path)
+      `)
       .eq('request_id', ttsId)
       .eq('account_id', accountId)
       .single()
+    
     if (error) {
       console.error('Error fetching TTS request:', error)
       setError('TTS 요청을 찾을 수 없습니다.')
@@ -65,7 +76,19 @@ export default function TTSResultDetailPage() {
       setLoading(false)
       return
     }
-    setTtsRequest(data as TTSRequestDetail)
+    
+    // 참조 오디오 별도로 가져오기
+    let refVoiceData = null;
+    if (data.reference_id) {
+      const { data: refVoice } = await supabase
+        .from('ref_voices')
+        .select('ref_file_url')
+        .eq('ref_id', data.reference_id)
+        .single()
+      refVoiceData = refVoice ? [refVoice] : null;
+    }
+    
+    setTtsRequest({ ...data, ref_voices: refVoiceData } as TTSRequestDetail)
     setLoading(false)
   }, [accountId, ttsId, supabase])
 
@@ -275,19 +298,19 @@ export default function TTSResultDetailPage() {
             <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">입력 텍스트</h2>
             <div className="bg-gray-50 dark:bg-gray-700 p-3 sm:p-4 rounded-lg">
               <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 whitespace-pre-wrap leading-relaxed">
-                {ttsRequest.gen_text}
+                {ttsRequest.input_text}
               </p>
             </div>
           </div>
 
           {/* 참조 오디오 */}
-          {ttsRequest.reference_id && (
+          {ttsRequest.ref_voices && ttsRequest.ref_voices.length > 0 && (
             <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">참조 오디오</h2>
               <div className="w-full">
                 <audio 
                   controls 
-                  src={ttsRequest.reference_id} 
+                  src={ttsRequest.ref_voices[0].ref_file_url} 
                   className="w-full h-12 sm:h-14"
                   preload="metadata"
                 />
@@ -298,12 +321,12 @@ export default function TTSResultDetailPage() {
           {/* 생성된 음성 */}
           <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">생성된 음성</h2>
-            {ttsRequest.ref_voices && ttsRequest.ref_voices.length > 0 ? (
+            {ttsRequest.gen_audios && ttsRequest.gen_audios.length > 0 ? (
               <div className="space-y-4">
                 <div className="w-full">
                   <audio 
                     controls 
-                    src={ttsRequest.ref_voices[0].ref_file_url} 
+                    src={ttsRequest.gen_audios[0].gen_file_url} 
                     className="w-full h-12 sm:h-14"
                     preload="metadata"
                   />
@@ -311,7 +334,7 @@ export default function TTSResultDetailPage() {
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     onClick={() => {
-                      const url = ttsRequest.ref_voices?.[0]?.ref_file_url;
+                      const url = ttsRequest.gen_audios?.[0]?.gen_file_url;
                       if (url) {
                         handleDownload(url, `tts-generated-${ttsRequest.request_id}.mp3`);
                       } else {

@@ -14,10 +14,11 @@ import { Button } from '@/components/ui/button'
 type TTSRequestRow = {
   request_id: string
   reference_id: string | null
-  gen_text: string
+  input_text: string
   status: string
   created_at: string
   updated_at: string
+  gen_audios?: { gen_file_url: string; gen_file_path: string }[]
 }
 
 export default function UserResultsPage() {
@@ -56,11 +57,23 @@ export default function UserResultsPage() {
   // account_id로 모든 TTS 요청 불러오기
   const fetchRows = useCallback(async () => {
     if (!accountId) return
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('tts_requests')
-      .select('request_id, reference_id, gen_text, status, created_at, updated_at')
+      .select(`
+        request_id, 
+        reference_id, 
+        input_text, 
+        status, 
+        created_at, 
+        updated_at,
+        gen_audios(gen_file_url, gen_file_path)
+      `)
       .eq('account_id', accountId)
       .order('created_at', { ascending: false })
+    
+    console.log('Fetched data:', data)
+    console.log('Fetch error:', error)
+    
     setRows((data as TTSRequestRow[]) || [])
     setLoading(false)
     setRefreshing(false)
@@ -433,6 +446,13 @@ export default function UserResultsPage() {
                  {rows.map((row, i) => {
            const statusInfo = getStatusInfo(row.status)
            
+           // 디버깅을 위한 로그
+           console.log(`Row ${i}:`, {
+             status: row.status,
+             gen_audios: row.gen_audios,
+             request_id: row.request_id
+           })
+           
            return (
              <div 
                key={row.request_id} 
@@ -448,62 +468,61 @@ export default function UserResultsPage() {
                 <p 
                   className="text-gray-900 dark:text-gray-100 text-sm leading-relaxed cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                   onClick={() => {
-                    setSelectedText(row.gen_text)
+                    setSelectedText(row.input_text)
                     setShowTextModal(true)
                   }}
                 >
-                  {truncateText(row.gen_text, isMobile ? 1 : 2)}
+                  {truncateText(row.input_text, isMobile ? 1 : 2)}
                 </p>
               </div>
 
-              {/* 플레이 바 & 재생시간 */}
+                            {/* 플레이 바 & 재생시간 */}
               <div className="mb-3 sm:mb-4">
-                                 {row.reference_id ? (
-                   <div className="w-full">
-                     <AudioPlayer 
-                       audioUrl={`${row.reference_id}?t=${Date.now()}`} 
-                       width={isMobile ? 350 : 400} 
-                       height={isMobile ? 60 : 50}
-                     />
-                   </div>
-                 ) : (
-                  <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
-                    {statusInfo.icon}
-                    <span className={statusInfo.color}>{statusInfo.text}</span>
+                {/* 생성된 오디오가 있으면 플레이어 표시 */}
+                {row.gen_audios && row.gen_audios.length > 0 ? (
+                  <div className="w-full">
+                    <AudioPlayer 
+                      audioUrl={`${row.gen_audios[0].gen_file_url}?t=${Date.now()}`} 
+                      width={isMobile ? 350 : 400} 
+                      height={isMobile ? 60 : 50}
+                    />
                   </div>
-                )}
+                ) : (
+                 <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
+                   {statusInfo.icon}
+                   <span className={statusInfo.color}>{statusInfo.text}</span>
+                 </div>
+               )}
               </div>
 
               {/* 버튼 영역 */}
               <div className="flex items-center justify-between gap-2">
-                {row.status === 'success' && row.reference_id ? (
-                  <button
-                    onClick={() => handleDownload(row.reference_id!, `tts-generated-${i + 1}.mp3`)}
-                    className="flex-1 h-12 sm:h-11 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm rounded-lg transition-colors"
-                    title="음성 파일 다운로드"
-                  >
-                    <Download size={16} />
-                    <span className="hidden sm:inline">다운로드</span>
-                    <span className="sm:hidden">다운</span>
-                  </button>
-                ) : (
-                  <div className={`flex-1 h-12 sm:h-11 flex items-center justify-center gap-2 bg-gray-200 dark:bg-gray-700 text-sm rounded-lg ${statusInfo.color}`}>
-                    {statusInfo.icon}
-                    <span className="hidden sm:inline">{statusInfo.text}</span>
-                    <span className="sm:hidden">{statusInfo.text}</span>
-                  </div>
-                )}
+                {/* 다운로드 버튼 - 항상 표시 (디버깅용) */}
+                <button
+                  onClick={() => {
+                    console.log('Download clicked for row:', row);
+                    if (row.gen_audios && row.gen_audios.length > 0) {
+                      handleDownload(row.gen_audios[0].gen_file_url, `tts-generated-${i + 1}.mp3`);
+                    } else {
+                      alert(`음성 파일을 찾을 수 없습니다. Status: ${row.status}, Gen audios: ${JSON.stringify(row.gen_audios)}`);
+                    }
+                  }}
+                  className="flex-1 h-12 sm:h-11 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm rounded-lg transition-colors"
+                  title="음성 파일 다운로드"
+                >
+                  <Download size={16} />
+                  <span className="hidden sm:inline">다운로드</span>
+                  <span className="sm:hidden">다운</span>
+                </button>
                 
-                {/* 공유 버튼 (성공한 결과만) */}
-                {row.status === 'success' && (
-                  <ShareButton
-                    ttsId={row.request_id}
-                    text=""
-                    variant="ghost"
-                    size="sm"
-                    className="h-12 w-12 sm:h-11 sm:w-11 flex items-center justify-center bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded-lg transition-colors"
-                  />
-                )}
+                {/* 공유 버튼 - 항상 표시 (디버깅용) */}
+                <ShareButton
+                  ttsId={row.request_id}
+                  text=""
+                  variant="ghost"
+                  size="sm"
+                  className="h-12 w-12 sm:h-11 sm:w-11 flex items-center justify-center bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded-lg transition-colors"
+                />
                 
                 <Link
                   href={`/user/results/${row.request_id}`}

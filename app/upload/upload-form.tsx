@@ -88,6 +88,9 @@ const FileUploadDemo = () => {
   const [selectedPresetAudio, setSelectedPresetAudio] = useState<string | null>(null)
   const [showPresetAudioList, setShowPresetAudioList] = useState(false)
   
+  // 이전에 사용한 음성 관련 상태
+  const [usedAudioFile, setUsedAudioFile] = useState<string | null>(null)
+  
   // 텍스트 예시 관련 상태
   const [showTextExamples, setShowTextExamples] = useState(false)
   
@@ -286,6 +289,8 @@ const FileUploadDemo = () => {
     setAudioElement(null)
     setIsPlaying(false)
     setCurrentStep('upload')
+    setSelectedPresetAudio(null)
+    setUsedAudioFile(null)
   }, [])
 
   // 녹음된 오디오를 파일로 변환하고 미리보기 설정
@@ -377,6 +382,35 @@ const FileUploadDemo = () => {
       return null
     }
   }, [selectedPresetAudio, userId, supabase])
+
+  // 이전에 사용한 음성 처리 함수 (이미 업로드된 파일이므로 복사만 수행)
+  const handleUsedAudioFile = useCallback(async (): Promise<string | null> => {
+    if (!usedAudioFile || !userId) return null
+    
+    try {
+      // 기존 파일 경로에서 새 파일명 생성
+      const originalFileName = usedAudioFile.split('/').pop();
+      const newFileName = `${Date.now()}_${originalFileName}`;
+      const newFilePath = `reference/${userId}/${newFileName}`;
+      
+      // 기존 파일을 새 경로로 복사
+      const { error } = await supabase.storage
+        .from('prototype')
+        .copy(usedAudioFile, newFilePath)
+      
+      if (error) {
+        console.error('이전 사용 음성 복사 실패:', error)
+        setErrorMessage('이전 사용 음성 처리에 실패했습니다.')
+        return null
+      }
+      
+      return newFilePath
+    } catch (error) {
+      console.error('이전 사용 음성 처리 중 오류:', error)
+      setErrorMessage('이전 사용 음성 처리 중 오류가 발생했습니다.')
+      return null
+    }
+  }, [usedAudioFile, userId, supabase])
 
   // 녹음된 오디오가 변경될 때마다 미리보기 설정
   useEffect(() => {
@@ -822,6 +856,135 @@ const FileUploadDemo = () => {
     }
   }, [accountId, selectedPresetAudio, gen_text, uploadPresetAudio, supabase, router, uploadReferenceAudioAndGetRefId])
 
+  // 이전에 사용한 음성으로 TTS 시작하는 함수
+  const startTTSWithUsedAudio = useCallback(async () => {
+    if (!accountId || !usedAudioFile || !gen_text.trim()) return
+    
+    setIsProcessing(true)
+    setErrorMessage('')
+    
+    try {
+      // 1단계: 이전 사용 음성 처리 (복사)
+      const filePath = await handleUsedAudioFile()
+      if (!filePath) {
+        setIsProcessing(false)
+        return
+      }
+      
+      // 2단계: signed URL 생성
+      const { data, error: urlError } = await supabase
+        .storage
+        .from('prototype')
+        .createSignedUrl(filePath, 60 * 60 * 24 * 30) // 30일
+
+      if (urlError || !data?.signedUrl) {
+        console.error('Error creating signed URL:', urlError?.message)
+        setErrorMessage('Signed URL 생성에 실패했습니다.')
+        setIsProcessing(false)
+        return
+      }
+
+      const signedUrl = data.signedUrl
+
+      // 3단계: ref_voices에 insert 후 ref_id 받아오기
+      const ref_id = await uploadReferenceAudioAndGetRefId(filePath, signedUrl)
+      if (!ref_id) {
+        setIsProcessing(false)
+        return
+      }
+
+      // 4단계: tts_requests 테이블에 INSERT
+      const { data: insertData, error } = await supabase
+        .from('tts_requests')
+        .insert({
+          account_id: accountId,
+          reference_id: ref_id,
+          input_text: gen_text,
+          status: 'pending',
+        })
+        .select('request_id')
+        .single()
+
+      if (error) {
+        console.error('Error inserting tts_request:', error.message)
+        setErrorMessage('TTS 요청 저장에 실패했습니다.')
+        setIsProcessing(false)
+        return
+      }
+
+      if (!insertData?.request_id) {
+        console.error('No request_id returned from insert')
+        setErrorMessage('TTS ID 생성에 실패했습니다.')
+        setIsProcessing(false)
+        return
+      }
+
+      // 5단계: TTS Runner Edge Function 호출
+      try {
+        console.log('Calling TTS Runner Edge Function with used audio...')
+        console.log('Request payload:', {
+          reference_id: ref_id,
+          reference_audio_url: signedUrl,
+          input_text: gen_text,
+          account_id: accountId
+        })
+        
+        const { data: functionData, error: functionError } = await supabase.functions.invoke('rapid-worker', {
+          body: {
+            reference_id: ref_id,
+            reference_audio_url: signedUrl,
+            input_text: gen_text,
+            account_id: accountId
+          }
+        })
+
+        if (functionError) {
+          console.error('Error calling TTS Runner:', functionError)
+          console.error('Error details:', {
+            message: functionError.message,
+            name: functionError.name,
+            status: functionError.status,
+            statusText: functionError.statusText
+          })
+          
+          // Update status to failed
+          await supabase
+            .from('tts_requests')
+            .update({ 
+              status: 'fail',
+              error_message: `Edge Function Error: ${functionError.message}`
+            })
+            .eq('request_id', insertData.request_id)
+        } else {
+          console.log('TTS Runner called successfully:', functionData)
+          // 성공적으로 호출되면 상태를 'in_progress'로 업데이트
+          await supabase
+            .from('tts_requests')
+            .update({ status: 'in_progress' })
+            .eq('request_id', insertData.request_id)
+        }
+      } catch (functionError) {
+        console.error('Error calling TTS Runner function:', functionError)
+        
+        // Update status to failed
+        await supabase
+          .from('tts_requests')
+          .update({ 
+            status: 'fail',
+            error_message: `Exception: ${functionError instanceof Error ? functionError.message : 'Unknown error'}`
+          })
+          .eq('request_id', insertData.request_id)
+      }
+
+      // 6단계: 결과 목록 페이지로 이동
+      router.push(`/user/results`)
+    } catch (error) {
+      console.error('TTS 처리 중 오류:', error)
+      setErrorMessage('TTS 처리 중 오류가 발생했습니다.')
+      setIsProcessing(false)
+    }
+  }, [accountId, usedAudioFile, gen_text, handleUsedAudioFile, supabase, router, uploadReferenceAudioAndGetRefId])
+
   // 이전에 사용한 음성 목록 불러오기 함수
   const fetchUsedAudioFiles = useCallback(async () => {
     if (!userId) return;
@@ -864,7 +1027,9 @@ const FileUploadDemo = () => {
       return;
     }
 
-    setSelectedPresetAudio(audioFile);
+    // 이전에 사용한 음성임을 표시하기 위해 selectedUsedAudio 상태 사용
+    setSelectedPresetAudio(null); // 미리 선택된 오디오 초기화
+    setUsedAudioFile(filePath); // 새로운 상태로 이전 사용 음성 저장
     setAudioUrl(data.signedUrl);
     setShowPreview(true);
     setCurrentStep('preview');
@@ -911,6 +1076,8 @@ const FileUploadDemo = () => {
     console.log('handlePresetAudioSelectWithReset 호출됨:', audioFile)
     // 먼저 파일 업로드 초기화
     props.setFiles([])
+    // 이전 사용 음성 초기화
+    setUsedAudioFile(null)
     // 그 다음 미리 선택된 오디오 설정
     handlePresetAudioSelect(audioFile)
   }, [handlePresetAudioSelect, props])
@@ -931,20 +1098,21 @@ const FileUploadDemo = () => {
       setAudioChunks([])
       setRecordingTime(0)
       
-      // 미리 선택된 오디오 초기화 (파일이 실제로 업로드된 경우에만)
+      // 미리 선택된 오디오 및 이전 사용 음성 초기화 (파일이 실제로 업로드된 경우에만)
       if (props.files.length > 0) {
         setSelectedPresetAudio(null)
+        setUsedAudioFile(null)
       }
       
       // 새로운 파일 설정
       handleFileSelect(props.files)
     } else {
-      // 파일이 없으면 미리보기 숨기기 (미리 선택된 오디오가 없을 때만)
-      if (!selectedPresetAudio) {
+      // 파일이 없으면 미리보기 숨기기 (미리 선택된 오디오나 이전 사용 음성이 없을 때만)
+      if (!selectedPresetAudio && !usedAudioFile) {
         clearAudioPreview()
       }
     }
-  }, [props.files, handleFileSelect, clearAudioPreview, selectedPresetAudio])
+  }, [props.files, handleFileSelect, clearAudioPreview, selectedPresetAudio, usedAudioFile])
 
   // 상태 변화 디버깅을 위한 useEffect
   useEffect(() => {
@@ -1174,11 +1342,12 @@ const FileUploadDemo = () => {
 
           {/* Step 2: 미리듣기 */}
           {(() => {
-            const shouldShowPreview = currentStep === 'preview' && (showPreview || selectedPresetAudio)
+            const shouldShowPreview = currentStep === 'preview' && (showPreview || selectedPresetAudio || usedAudioFile)
             console.log('미리듣기 조건 확인:', {
               currentStep,
               showPreview,
               selectedPresetAudio,
+              usedAudioFile,
               shouldShowPreview
             })
             return shouldShowPreview
@@ -1189,12 +1358,14 @@ const FileUploadDemo = () => {
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
                   {recordedAudioBlob ? '녹음 완료 · 미리듣기' : 
                    selectedPresetAudio ? '미리 준비된 음성 · 미리듣기' : 
+                   usedAudioFile ? '이전 사용 음성 · 미리듣기' :
                    '업로드 완료 · 미리듣기'}
                 </span>
                 <button
                   onClick={() => {
                     restartRecordingWithFileReset()
                     setSelectedPresetAudio(null)
+                    setUsedAudioFile(null)
                   }}
                   className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                 >
@@ -1316,7 +1487,12 @@ const FileUploadDemo = () => {
 
               {/* TTS 생성 시작 버튼 */}
               <button
-                onClick={recordedAudioBlob ? startTTSWithRecordedAudio : selectedPresetAudio ? startTTSWithPresetAudio : props.onUpload}
+                onClick={
+                  recordedAudioBlob ? startTTSWithRecordedAudio : 
+                  selectedPresetAudio ? startTTSWithPresetAudio : 
+                  usedAudioFile ? startTTSWithUsedAudio : 
+                  props.onUpload
+                }
                 disabled={
                   (props.files.length > 0 && props.files.some((file) => file.errors.length !== 0)) || 
                   !gen_text.trim() ||
