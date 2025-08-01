@@ -452,9 +452,40 @@ const FileUploadDemo = () => {
     }
   }, [recordedAudioBlob, userId, supabase])
 
-  // ref_voices에 오디오 업로드 후 ref_id 받아오기 (예시)
+  // 중복 요청 확인 함수 - 모든 진행 중인 상태 확인
+  const checkDuplicateRequest = async (accountId: string, input_text: string, reference_id: string) => {
+    const { data, error } = await supabase
+      .from('tts_requests')
+      .select('request_id, status')
+      .eq('account_id', accountId)
+      .eq('input_text', input_text)
+      .eq('reference_id', reference_id)
+      .in('status', ['pending', 'processing'])
+      .limit(5) // 최근 요청 몇 개 확인
+    
+    if (error) {
+      console.error('중복 확인 중 오류:', error)
+      return false
+    }
+    
+    // 진행 중인 요청이 있으면 중복으로 판단
+    if (data && data.length > 0) {
+      console.log('중복 요청 감지:', {
+        accountId,
+        input_text,
+        reference_id,
+        existingRequests: data
+      })
+      return true
+    }
+    
+    return false
+  }
+
+  // ref_voices에 오디오 업로드 후 ref_id 받아오기
   const uploadReferenceAudioAndGetRefId = async (filePath: string, signedUrl: string) => {
     if (!accountId) return null;
+    
     // ref_voices에 insert
     const { data, error } = await supabase
       .from('ref_voices')
@@ -466,24 +497,91 @@ const FileUploadDemo = () => {
       })
       .select('ref_id')
       .single();
+    
     if (error) {
+      console.error('참조 오디오 등록 실패:', error)
       setErrorMessage('참조 오디오 등록에 실패했습니다.');
       return null;
     }
+    
     return data.ref_id;
   }
 
-  // 업로드 성공 시 tts_requests에 행 삽입 + TTS Runner 호출 + 페이지 이동
-  const onUploadSuccess = useCallback(
-    async (uploadedFileUrls: string[]) => {
-      if (!accountId || uploadedFileUrls.length === 0) return
+  // 텍스트와 오디오 조합으로 중복 요청 사전 확인
+  const checkDuplicateByTextAndAudio = async (accountId: string, input_text: string, audioSource: string) => {
+    // 텍스트와 오디오 소스 조합으로 먼저 확인
+    const { data, error } = await supabase
+      .from('tts_requests')
+      .select('request_id, status, created_at')
+      .eq('account_id', accountId)
+      .eq('input_text', input_text)
+      .in('status', ['pending', 'processing'])
+      .gte('created_at', new Date(Date.now() - 60000).toISOString()) // 최근 1분 이내
+      .limit(3)
+    
+    if (error) {
+      console.error('사전 중복 확인 중 오류:', error)
+      return false
+    }
+    
+    return data && data.length > 0
+  }
+
+  // 통합된 TTS 시작 함수 - 모든 오디오 소스 처리
+  const startTTS = useCallback(async () => {
+    if (!accountId || !gen_text.trim()) {
+      setErrorMessage('계정 정보 또는 텍스트가 없습니다.')
+      return
+    }
+    
+    // 이미 처리 중이면 중단
+    if (isProcessing) {
+      console.log('이미 처리 중인 요청이 있습니다.')
+      return
+    }
+    
+    setIsProcessing(true)
+    setErrorMessage('')
+
+    try {
+      // 0단계: 텍스트 기준 사전 중복 확인
+      const audioSource = recordedAudioBlob ? 'recorded' : 
+                         selectedPresetAudio ? selectedPresetAudio : 
+                         usedAudioFile ? usedAudioFile : 'upload'
       
-      setIsProcessing(true)
-      setErrorMessage('')
+      const isEarlyDuplicate = await checkDuplicateByTextAndAudio(accountId, gen_text, audioSource)
+      if (isEarlyDuplicate) {
+        setErrorMessage('동일한 텍스트로 최근에 요청이 처리 중입니다. 잠시 후 다시 시도해주세요.')
+        setIsProcessing(false)
+        return
+      }
 
-      const filePath = uploadedFileUrls[0]
+      let filePath: string | null = null
+      let signedUrl: string | null = null
 
-      // signed URL 생성
+      // 1단계: 오디오 소스에 따라 처리
+      if (recordedAudioBlob) {
+        // 녹음된 오디오 처리
+        filePath = await uploadRecordedAudio()
+      } else if (selectedPresetAudio) {
+        // 미리 준비된 오디오 처리
+        filePath = await uploadPresetAudio()
+      } else if (usedAudioFile) {
+        // 이전에 사용한 오디오 처리
+        filePath = await handleUsedAudioFile()
+      } else {
+        // 파일 업로드가 필요한 경우 - 이는 onUploadSuccess에 의해 처리됨
+        setErrorMessage('오디오 파일을 선택해주세요.')
+        setIsProcessing(false)
+        return
+      }
+
+      if (!filePath) {
+        setIsProcessing(false)
+        return
+      }
+
+      // 2단계: signed URL 생성
       const { data, error: urlError } = await supabase
         .storage
         .from('prototype')
@@ -496,432 +594,29 @@ const FileUploadDemo = () => {
         return
       }
 
-      const signedUrl = data.signedUrl
+      signedUrl = data.signedUrl
 
-      // ref_voices에 insert 후 ref_id 받아오기
+      // 3단계: ref_voices에 insert 후 ref_id 받아오기
       const ref_id = await uploadReferenceAudioAndGetRefId(filePath, signedUrl)
       if (!ref_id) {
         setIsProcessing(false)
         return
       }
-      // setRefId(ref_id) // 이 부분은 이제 사용되지 않으므로 제거
 
-      // tts_requests에 insert
-      const { data: insertData, error } = await supabase
-        .from('tts_requests')
-        .insert({
-          account_id: accountId,
-          reference_id: ref_id,
-          input_text: gen_text,
-          status: 'pending',
-        })
-        .select('request_id')
-        .single()
-
-      if (error) {
-        console.error('Error inserting tts_request:', error.message)
-        setErrorMessage('TTS 요청 저장에 실패했습니다.')
+      // 4단계: 정확한 중복 요청 확인
+      const isDuplicate = await checkDuplicateRequest(accountId, gen_text, ref_id)
+      if (isDuplicate) {
+        setErrorMessage('동일한 요청이 이미 처리 중입니다.')
         setIsProcessing(false)
         return
       }
 
-      if (!insertData?.request_id) {
-        console.error('No request_id returned from insert')
-        setErrorMessage('TTS ID 생성에 실패했습니다.')
-        setIsProcessing(false)
-        return
-      }
+      // 4.5단계: 중복 확인 후 약간의 지연 (Race condition 방지)
+      await new Promise(resolve => setTimeout(resolve, 100))
 
-      // 2단계: TTS Runner Edge Function 호출
+      // 5단계: TTS Runner Edge Function 호출
       try {
         console.log('Calling TTS Runner Edge Function...')
-        console.log('Request payload:', {
-          reference_id: ref_id,
-          reference_audio_url: signedUrl, // signedUrl이 있을 때만
-          input_text: gen_text,
-          account_id: accountId
-        })
-        
-        const { data: functionData, error: functionError } = await supabase.functions.invoke('rapid-worker', {
-          body: {
-            reference_id: ref_id,
-            reference_audio_url: signedUrl, // signedUrl이 있을 때만
-            input_text: gen_text,
-            account_id: accountId
-          }
-        })
-
-        if (functionError) {
-          console.error('Error calling TTS Runner:', functionError)
-          console.error('Error details:', {
-            message: functionError.message,
-            name: functionError.name,
-            status: functionError.status,
-            statusText: functionError.statusText
-          })
-          
-          // Update status to failed
-          await supabase
-            .from('tts_requests')
-            .update({ 
-              status: 'fail',
-              error_message: `Edge Function Error: ${functionError.message}`
-            })
-            .eq('request_id', insertData.request_id)
-        } else {
-          console.log('TTS Runner called successfully:', functionData)
-          // 성공적으로 호출되면 상태를 'in_progress'로 업데이트
-          await supabase
-            .from('tts_requests')
-            .update({ status: 'in_progress' })
-            .eq('request_id', insertData.request_id)
-        }
-      } catch (functionError) {
-        console.error('Error calling TTS Runner function:', functionError)
-        
-        // Update status to failed
-        await supabase
-          .from('tts_requests')
-          .update({ 
-            status: 'fail',
-            error_message: `Exception: ${functionError instanceof Error ? functionError.message : 'Unknown error'}`
-          })
-          .eq('request_id', insertData.request_id)
-      }
-
-      // 3단계: 결과 목록 페이지로 이동
-      router.push(`/user/results`)
-    },
-    [accountId, gen_text, supabase, router]
-  )
-
-  // 녹음된 오디오로 TTS 시작하는 함수
-  const startTTSWithRecordedAudio = useCallback(async () => {
-    if (!accountId || !recordedAudioBlob || !gen_text.trim()) return
-    
-    setIsProcessing(true)
-    setErrorMessage('')
-    
-    try {
-      // 1단계: 녹음된 오디오 업로드
-      const filePath = await uploadRecordedAudio()
-      if (!filePath) {
-        setIsProcessing(false)
-        return
-      }
-      
-      // 2단계: signed URL 생성
-      const { data, error: urlError } = await supabase
-        .storage
-        .from('prototype')
-        .createSignedUrl(filePath, 60 * 60 * 24 * 30) // 30일
-
-      if (urlError || !data?.signedUrl) {
-        console.error('Error creating signed URL:', urlError?.message)
-        setErrorMessage('Signed URL 생성에 실패했습니다.')
-        setIsProcessing(false)
-        return
-      }
-
-      const signedUrl = data.signedUrl
-
-      // 3단계: ref_voices에 insert 후 ref_id 받아오기
-      const ref_id = await uploadReferenceAudioAndGetRefId(filePath, signedUrl)
-      if (!ref_id) {
-        setIsProcessing(false)
-        return
-      }
-      // setRefId(ref_id) // 이 부분은 이제 사용되지 않으므로 제거
-
-      // 4단계: tts_requests 테이블에 INSERT
-      const { data: insertData, error } = await supabase
-        .from('tts_requests')
-        .insert({
-          account_id: accountId,
-          reference_id: ref_id,
-          input_text: gen_text,
-          status: 'pending',
-        })
-        .select('request_id')
-        .single()
-
-      if (error) {
-        console.error('Error inserting tts_request:', error.message)
-        setErrorMessage('TTS 요청 저장에 실패했습니다.')
-        setIsProcessing(false)
-        return
-      }
-
-      if (!insertData?.request_id) {
-        console.error('No request_id returned from insert')
-        setErrorMessage('TTS ID 생성에 실패했습니다.')
-        setIsProcessing(false)
-        return
-      }
-
-      // 5단계: TTS Runner Edge Function 호출
-      try {
-        console.log('Calling TTS Runner Edge Function with recorded audio...')
-        console.log('Request payload:', {
-          reference_id: ref_id,
-          reference_audio_url: signedUrl, // signedUrl이 있을 때만
-          input_text: gen_text,
-          account_id: accountId
-        })
-        
-        const { data: functionData, error: functionError } = await supabase.functions.invoke('rapid-worker', {
-          body: {
-            reference_id: ref_id,
-            reference_audio_url: signedUrl, // signedUrl이 있을 때만
-            input_text: gen_text,
-            account_id: accountId
-          }
-        })
-
-        if (functionError) {
-          console.error('Error calling TTS Runner:', functionError)
-          console.error('Error details:', {
-            message: functionError.message,
-            name: functionError.name,
-            status: functionError.status,
-            statusText: functionError.statusText
-          })
-          
-          // Update status to failed
-          await supabase
-            .from('tts_requests')
-            .update({ 
-              status: 'fail',
-              error_message: `Edge Function Error: ${functionError.message}`
-            })
-            .eq('request_id', insertData.request_id)
-        } else {
-          console.log('TTS Runner called successfully:', functionData)
-          // 성공적으로 호출되면 상태를 'in_progress'로 업데이트
-          await supabase
-            .from('tts_requests')
-            .update({ status: 'in_progress' })
-            .eq('request_id', insertData.request_id)
-        }
-      } catch (functionError) {
-        console.error('Error calling TTS Runner function:', functionError)
-        
-        // Update status to failed
-        await supabase
-          .from('tts_requests')
-          .update({ 
-            status: 'fail',
-            error_message: `Exception: ${functionError instanceof Error ? functionError.message : 'Unknown error'}`
-          })
-          .eq('request_id', insertData.request_id)
-      }
-
-      // 6단계: 결과 목록 페이지로 이동
-      router.push(`/user/results`)
-      
-    } catch (error) {
-      console.error('녹음 오디오 TTS 처리 중 오류:', error)
-      setErrorMessage('TTS 처리 중 오류가 발생했습니다.')
-      setIsProcessing(false)
-    }
-  }, [accountId, recordedAudioBlob, gen_text, uploadRecordedAudio, supabase, router, uploadReferenceAudioAndGetRefId])
-
-  // 미리 선택된 오디오로 TTS 시작하는 함수
-  const startTTSWithPresetAudio = useCallback(async () => {
-    if (!accountId || !selectedPresetAudio || !gen_text.trim()) return
-    
-    setIsProcessing(true)
-    setErrorMessage('')
-    
-    try {
-      // 1단계: 미리 선택된 오디오 업로드
-      const filePath = await uploadPresetAudio()
-      if (!filePath) {
-        setIsProcessing(false)
-        return
-      }
-      
-      // 2단계: signed URL 생성
-      const { data, error: urlError } = await supabase
-        .storage
-        .from('prototype')
-        .createSignedUrl(filePath, 60 * 60 * 24 * 30) // 30일
-
-      if (urlError || !data?.signedUrl) {
-        console.error('Error creating signed URL:', urlError?.message)
-        setErrorMessage('Signed URL 생성에 실패했습니다.')
-        setIsProcessing(false)
-        return
-      }
-
-      const signedUrl = data.signedUrl
-
-      // 3단계: ref_voices에 insert 후 ref_id 받아오기
-      const ref_id = await uploadReferenceAudioAndGetRefId(filePath, signedUrl)
-      if (!ref_id) {
-        setIsProcessing(false)
-        return
-      }
-      // setRefId(ref_id) // 이 부분은 이제 사용되지 않으므로 제거
-
-      // 4단계: tts_requests 테이블에 INSERT
-      const { data: insertData, error } = await supabase
-        .from('tts_requests')
-        .insert({
-          account_id: accountId,
-          reference_id: ref_id,
-          input_text: gen_text,
-          status: 'pending',
-        })
-        .select('request_id')
-        .single()
-
-      if (error) {
-        console.error('Error inserting tts_request:', error.message)
-        setErrorMessage('TTS 요청 저장에 실패했습니다.')
-        setIsProcessing(false)
-        return
-      }
-
-      if (!insertData?.request_id) {
-        console.error('No request_id returned from insert')
-        setErrorMessage('TTS ID 생성에 실패했습니다.')
-        setIsProcessing(false)
-        return
-      }
-
-      // 5단계: TTS Runner Edge Function 호출
-      try {
-        console.log('Calling TTS Runner Edge Function with preset audio...')
-        console.log('Request payload:', {
-          reference_id: ref_id,
-          reference_audio_url: signedUrl, // signedUrl이 있을 때만
-          input_text: gen_text,
-          account_id: accountId
-        })
-        
-        const { data: functionData, error: functionError } = await supabase.functions.invoke('rapid-worker', {
-          body: {
-            reference_id: ref_id,
-            reference_audio_url: signedUrl, // signedUrl이 있을 때만
-            input_text: gen_text,
-            account_id: accountId
-          }
-        })
-
-        if (functionError) {
-          console.error('Error calling TTS Runner:', functionError)
-          console.error('Error details:', {
-            message: functionError.message,
-            name: functionError.name,
-            status: functionError.status,
-            statusText: functionError.statusText
-          })
-          
-          // Update status to failed
-          await supabase
-            .from('tts_requests')
-            .update({ 
-              status: 'fail',
-              error_message: `Edge Function Error: ${functionError.message}`
-            })
-            .eq('request_id', insertData.request_id)
-        } else {
-          console.log('TTS Runner called successfully:', functionData)
-          // 성공적으로 호출되면 상태를 'in_progress'로 업데이트
-          await supabase
-            .from('tts_requests')
-            .update({ status: 'in_progress' })
-            .eq('request_id', insertData.request_id)
-        }
-      } catch (functionError) {
-        console.error('Error calling TTS Runner function:', functionError)
-        
-        // Update status to failed
-        await supabase
-          .from('tts_requests')
-          .update({ 
-            status: 'fail',
-            error_message: `Exception: ${functionError instanceof Error ? functionError.message : 'Unknown error'}`
-          })
-          .eq('request_id', insertData.request_id)
-      }
-
-      // 6단계: 결과 목록 페이지로 이동
-      router.push(`/user/results`)
-    } catch (error) {
-      console.error('TTS 처리 중 오류:', error)
-      setErrorMessage('TTS 처리 중 오류가 발생했습니다.')
-      setIsProcessing(false)
-    }
-  }, [accountId, selectedPresetAudio, gen_text, uploadPresetAudio, supabase, router, uploadReferenceAudioAndGetRefId])
-
-  // 이전에 사용한 음성으로 TTS 시작하는 함수
-  const startTTSWithUsedAudio = useCallback(async () => {
-    if (!accountId || !usedAudioFile || !gen_text.trim()) return
-    
-    setIsProcessing(true)
-    setErrorMessage('')
-    
-    try {
-      // 1단계: 이전 사용 음성 처리 (복사)
-      const filePath = await handleUsedAudioFile()
-      if (!filePath) {
-        setIsProcessing(false)
-        return
-      }
-      
-      // 2단계: signed URL 생성
-      const { data, error: urlError } = await supabase
-        .storage
-        .from('prototype')
-        .createSignedUrl(filePath, 60 * 60 * 24 * 30) // 30일
-
-      if (urlError || !data?.signedUrl) {
-        console.error('Error creating signed URL:', urlError?.message)
-        setErrorMessage('Signed URL 생성에 실패했습니다.')
-        setIsProcessing(false)
-        return
-      }
-
-      const signedUrl = data.signedUrl
-
-      // 3단계: ref_voices에 insert 후 ref_id 받아오기
-      const ref_id = await uploadReferenceAudioAndGetRefId(filePath, signedUrl)
-      if (!ref_id) {
-        setIsProcessing(false)
-        return
-      }
-
-      // 4단계: tts_requests 테이블에 INSERT
-      const { data: insertData, error } = await supabase
-        .from('tts_requests')
-        .insert({
-          account_id: accountId,
-          reference_id: ref_id,
-          input_text: gen_text,
-          status: 'pending',
-        })
-        .select('request_id')
-        .single()
-
-      if (error) {
-        console.error('Error inserting tts_request:', error.message)
-        setErrorMessage('TTS 요청 저장에 실패했습니다.')
-        setIsProcessing(false)
-        return
-      }
-
-      if (!insertData?.request_id) {
-        console.error('No request_id returned from insert')
-        setErrorMessage('TTS ID 생성에 실패했습니다.')
-        setIsProcessing(false)
-        return
-      }
-
-      // 5단계: TTS Runner Edge Function 호출
-      try {
-        console.log('Calling TTS Runner Edge Function with used audio...')
         console.log('Request payload:', {
           reference_id: ref_id,
           reference_audio_url: signedUrl,
@@ -947,43 +642,73 @@ const FileUploadDemo = () => {
             statusText: functionError.statusText
           })
           
-          // Update status to failed
-          await supabase
-            .from('tts_requests')
-            .update({ 
-              status: 'fail',
-              error_message: `Edge Function Error: ${functionError.message}`
-            })
-            .eq('request_id', insertData.request_id)
+          setErrorMessage(`Edge Function 호출 실패: ${functionError.message}`)
+          setIsProcessing(false)
+          return
         } else {
           console.log('TTS Runner called successfully:', functionData)
-          // 성공적으로 호출되면 상태를 'in_progress'로 업데이트
-          await supabase
-            .from('tts_requests')
-            .update({ status: 'in_progress' })
-            .eq('request_id', insertData.request_id)
+          
+          // Edge Function에서 반환된 request_id 사용
+          const requestId = functionData?.request_id
+          if (!requestId) {
+            console.error('No request_id returned from Edge Function')
+            setErrorMessage('요청 ID 생성에 실패했습니다.')
+            setIsProcessing(false)
+            return
+          }
+          
+          console.log('Request ID from Edge Function:', requestId)
         }
       } catch (functionError) {
         console.error('Error calling TTS Runner function:', functionError)
+        console.error('Exception details:', {
+          message: functionError instanceof Error ? functionError.message : 'Unknown error',
+          stack: functionError instanceof Error ? functionError.stack : undefined
+        })
         
-        // Update status to failed
-        await supabase
-          .from('tts_requests')
-          .update({ 
-            status: 'fail',
-            error_message: `Exception: ${functionError instanceof Error ? functionError.message : 'Unknown error'}`
-          })
-          .eq('request_id', insertData.request_id)
+        setErrorMessage(`Edge Function 호출 중 오류: ${functionError instanceof Error ? functionError.message : 'Unknown error'}`)
+        setIsProcessing(false)
+        return
       }
 
-      // 6단계: 결과 목록 페이지로 이동
+      // 7단계: 결과 목록 페이지로 이동
       router.push(`/user/results`)
+      
     } catch (error) {
       console.error('TTS 처리 중 오류:', error)
       setErrorMessage('TTS 처리 중 오류가 발생했습니다.')
       setIsProcessing(false)
     }
-  }, [accountId, usedAudioFile, gen_text, handleUsedAudioFile, supabase, router, uploadReferenceAudioAndGetRefId])
+  }, [
+    accountId, 
+    gen_text, 
+    recordedAudioBlob, 
+    selectedPresetAudio, 
+    usedAudioFile,
+    isProcessing,
+    uploadRecordedAudio,
+    uploadPresetAudio,
+    handleUsedAudioFile,
+    supabase, 
+    router
+  ])
+
+  // 파일 업로드 성공 시 호출되는 함수 (기존 구조 유지)
+  const onUploadSuccess = useCallback(
+    async (uploadedFileUrls: string[]) => {
+      if (!accountId || uploadedFileUrls.length === 0) return
+      
+      // 파일 업로드가 완료되면 startTTS 함수를 호출
+      await startTTS()
+    },
+    [accountId, startTTS]
+  )
+
+
+
+
+
+
 
   // 이전에 사용한 음성 목록 불러오기 함수
   const fetchUsedAudioFiles = useCallback(async () => {
@@ -1178,7 +903,6 @@ const FileUploadDemo = () => {
                 <span className="text-xs sm:text-sm font-medium hidden sm:inline">텍스트</span>
               </div>
           </div>
-
           {errorMessage && (
             <div className="p-3 bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg text-sm">
               {errorMessage}
@@ -1487,12 +1211,14 @@ const FileUploadDemo = () => {
 
               {/* TTS 생성 시작 버튼 */}
               <button
-                onClick={
-                  recordedAudioBlob ? startTTSWithRecordedAudio : 
-                  selectedPresetAudio ? startTTSWithPresetAudio : 
-                  usedAudioFile ? startTTSWithUsedAudio : 
-                  props.onUpload
-                }
+                onClick={() => {
+                  // 파일 업로드인 경우 props.onUpload 호출, 다른 경우 startTTS 호출
+                  if (!recordedAudioBlob && !selectedPresetAudio && !usedAudioFile && props.files.length > 0) {
+                    props.onUpload()
+                  } else {
+                    startTTS()
+                  }
+                }}
                 disabled={
                   (props.files.length > 0 && props.files.some((file) => file.errors.length !== 0)) || 
                   !gen_text.trim() ||
