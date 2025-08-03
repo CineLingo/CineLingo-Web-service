@@ -38,8 +38,8 @@ export default function SharePage() {
     if (!ttsId) return
     
     const fetchTTSRequest = async () => {
-      // ref_audios와 gen_audios join
-      const { data, error } = await supabase
+      // 먼저 TTS 요청 정보 가져오기
+      const { data: ttsData, error: ttsError } = await supabase
         .from('tts_requests')
         .select(`
           request_id, 
@@ -49,28 +49,75 @@ export default function SharePage() {
           status, 
           created_at, 
           updated_at, 
-          error_message, 
-          ref_audios(ref_file_url),
-          gen_audios(gen_file_url, gen_file_path)
+          error_message
         `)
         .eq('request_id', ttsId)
         .eq('status', 'success')
         .single()
 
-      if (error) {
-        console.error('Error fetching TTS request:', error)
+      if (ttsError) {
+        console.error('Error fetching TTS request:', ttsError)
+        console.error('Error details:', {
+          message: ttsError.message,
+          details: ttsError.details,
+          hint: ttsError.hint,
+          code: ttsError.code
+        })
         setError('공유된 TTS 결과를 찾을 수 없습니다.')
         setLoading(false)
         return
       }
 
-      if (!data) {
+      if (!ttsData) {
         setError('공유된 TTS 결과를 찾을 수 없습니다.')
         setLoading(false)
         return
       }
 
-      setTtsRequest(data as TTSRequestDetail)
+      // 생성된 오디오 가져오기
+      const { data: genAudioData, error: genAudioError } = await supabase
+        .from('gen_audios')
+        .select('gen_file_url, gen_file_path')
+        .eq('request_id', ttsId)
+        .limit(1)
+
+      if (genAudioError) {
+        console.error('Error fetching gen audio:', genAudioError)
+        console.error('Gen audio error details:', {
+          message: genAudioError.message,
+          details: genAudioError.details,
+          hint: genAudioError.hint,
+          code: genAudioError.code
+        })
+      }
+
+      // 참조 오디오 가져오기
+      let refAudioData = null
+      if (ttsData.reference_id) {
+        const { data: refAudio, error: refAudioError } = await supabase
+          .from('ref_audios')
+          .select('ref_file_url')
+          .eq('ref_id', ttsData.reference_id)
+          .single()
+        
+        if (refAudioError) {
+          console.error('Error fetching ref audio:', refAudioError)
+          console.error('Ref audio error details:', {
+            message: refAudioError.message,
+            details: refAudioError.details,
+            hint: refAudioError.hint,
+            code: refAudioError.code
+          })
+        } else {
+          refAudioData = refAudio ? [refAudio] : null
+        }
+      }
+
+            setTtsRequest({ 
+        ...ttsData, 
+        ref_audios: refAudioData,
+        gen_audios: genAudioData || []
+      } as TTSRequestDetail)
       setLoading(false)
     }
 
