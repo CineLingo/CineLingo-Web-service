@@ -9,14 +9,15 @@ import HomeButton from '@/components/home-button'
 
 type TTSRequestDetail = {
   request_id: string
-  account_id: string
+  user_id: string
   reference_id: string | null
   gen_text: string
   status: string
   created_at: string
   updated_at: string
   error_message?: string
-  ref_voices?: { ref_file_url: string }[]
+  ref_audios?: { ref_file_url: string }[]
+  gen_audios?: { gen_file_url: string; gen_file_path: string }[]
 }
 
 export default function SharePage() {
@@ -37,10 +38,21 @@ export default function SharePage() {
     if (!ttsId) return
     
     const fetchTTSRequest = async () => {
-      // ref_voices join 예시
+      // ref_audios와 gen_audios join
       const { data, error } = await supabase
         .from('tts_requests')
-        .select('request_id, account_id, reference_id, gen_text:input_text, status, created_at, updated_at, error_message, ref_voices(ref_file_url)')
+        .select(`
+          request_id, 
+          user_id, 
+          reference_id, 
+          gen_text:input_text, 
+          status, 
+          created_at, 
+          updated_at, 
+          error_message, 
+          ref_audios(ref_file_url),
+          gen_audios(gen_file_url, gen_file_path)
+        `)
         .eq('request_id', ttsId)
         .eq('status', 'success')
         .single()
@@ -67,8 +79,8 @@ export default function SharePage() {
 
   // 오디오 플레이어 설정
   useEffect(() => {
-    if (ttsRequest?.ref_voices && ttsRequest.ref_voices.length > 0) {
-      const audio = new Audio(ttsRequest.ref_voices[0].ref_file_url)
+    if (ttsRequest?.gen_audios && ttsRequest.gen_audios.length > 0) {
+      const audio = new Audio(ttsRequest.gen_audios[0].gen_file_url)
       
       audio.addEventListener('loadedmetadata', () => {
         setDuration(audio.duration)
@@ -92,7 +104,7 @@ export default function SharePage() {
         audio.removeEventListener('ended', () => {})
       }
     }
-  }, [ttsRequest?.ref_voices])
+  }, [ttsRequest?.gen_audios])
 
   // 재생/일시정지 토글
   const togglePlay = () => {
@@ -250,7 +262,7 @@ export default function SharePage() {
           {/* 생성된 음성 */}
           <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">생성된 음성</h2>
-            {ttsRequest.ref_voices && ttsRequest.ref_voices.length > 0 ? (
+            {ttsRequest.gen_audios && ttsRequest.gen_audios.length > 0 ? (
               <div className="space-y-4">
                 {/* 커스텀 오디오 플레이어 */}
                 <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">

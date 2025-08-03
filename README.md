@@ -53,17 +53,82 @@ Custom Text-to-Speech (TTS) web application built with Next.js, Supabase, and mo
 4. Set up Supabase:
    - Create a new Supabase project
    - Create a storage bucket named `prototype`
-   - Set up the following database table:
+   - Set up the following database tables:
      ```sql
-     CREATE TABLE tts_requests (
-       tts_id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-       user_id UUID REFERENCES auth.users(id),
-       reference_audio_storage_path TEXT,
-       reference_audio_url TEXT,
-       gen_text TEXT,
-       status TEXT DEFAULT 'pending',
-       generated_audio_url TEXT,
-       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+     CREATE TABLE public.accounts (
+       account_id uuid NOT NULL DEFAULT gen_random_uuid(),
+       name character varying,
+       email character varying NOT NULL UNIQUE,
+       usage real DEFAULT 0.0,
+       created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+       CONSTRAINT accounts_pkey PRIMARY KEY (account_id)
+     );
+
+     CREATE TABLE public.users (
+       user_id uuid NOT NULL DEFAULT gen_random_uuid(),
+       display_name character varying,
+       email character varying NOT NULL UNIQUE,
+       avatar_url text,
+       created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+       auth_provider boolean DEFAULT false,
+       balance double precision DEFAULT '0'::double precision,
+       CONSTRAINT users_pkey PRIMARY KEY (user_id)
+     );
+
+     CREATE TABLE public.user_to_account_mapping (
+       user_id uuid NOT NULL,
+       account_id uuid NOT NULL,
+       created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+       CONSTRAINT user_to_account_mapping_pkey PRIMARY KEY (user_id, account_id),
+       CONSTRAINT user_to_account_mapping_account_id_fkey FOREIGN KEY (account_id) REFERENCES public.accounts(account_id),
+       CONSTRAINT user_to_account_mapping_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id)
+     );
+
+     CREATE TABLE public.ref_audios (
+       ref_id uuid NOT NULL DEFAULT gen_random_uuid(),
+       user_id uuid,
+       ref_file_url text NOT NULL,
+       language USER-DEFINED,
+       ref_preset USER-DEFINED,
+       ref_text text,
+       ref_duration real,
+       is_public boolean DEFAULT false,
+       ref_shared_title text CHECK (length(ref_shared_title) <= 50),
+       created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+       ref_file_path text NOT NULL,
+       ref_shared_image text,
+       CONSTRAINT ref_audios_pkey PRIMARY KEY (ref_id),
+       CONSTRAINT ref_audios_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id)
+     );
+
+     CREATE TABLE public.tts_requests (
+       request_id uuid NOT NULL DEFAULT gen_random_uuid(),
+       user_id uuid,
+       reference_id uuid,
+       input_text text NOT NULL,
+       created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+       waited_time real,
+       status USER-DEFINED,
+       updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+       CONSTRAINT tts_requests_pkey PRIMARY KEY (request_id),
+       CONSTRAINT tts_requests_reference_id_fkey FOREIGN KEY (reference_id) REFERENCES public.ref_audios(ref_id),
+       CONSTRAINT tts_requests_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id)
+     );
+
+     CREATE TABLE public.gen_audios (
+       gen_id uuid NOT NULL DEFAULT gen_random_uuid(),
+       request_id uuid,
+       gen_file_url text,
+       model_version character varying NOT NULL,
+       gen_is_public boolean DEFAULT false,
+       gen_text text,
+       gen_duration real,
+       created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+       gen_file_path text NOT NULL,
+       gen_shared_title text CHECK (length(gen_shared_title) <= 50),
+       gen_shared_image text,
+       CONSTRAINT gen_audios_pkey PRIMARY KEY (gen_id),
+       CONSTRAINT gen_audios_request_id_fkey FOREIGN KEY (request_id) REFERENCES public.tts_requests(request_id)
      );
      ```
 

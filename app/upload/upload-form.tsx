@@ -94,8 +94,7 @@ const FileUploadDemo = () => {
   // 텍스트 예시 관련 상태
   const [showTextExamples, setShowTextExamples] = useState(false)
   
-  // account_id, ref_id를 받아오는 상태 추가
-  const [accountId, setAccountId] = useState<string | null>(null)
+
   
   // 이전에 사용한 음성 리스트 상태 및 표시 여부 상태 추가
   const [usedAudioFiles, setUsedAudioFiles] = useState<Array<{ name: string; file: string }>>([])
@@ -109,7 +108,7 @@ const FileUploadDemo = () => {
     audioUrlRef.current = audioUrl
   }, [audioUrl])
 
-  // 로그인한 사용자 정보 가져오기 및 account_id 매핑
+  // 로그인한 사용자 정보 가져오기
   useEffect(() => {
     const fetchUser = async () => {
       const {
@@ -117,12 +116,6 @@ const FileUploadDemo = () => {
       } = await supabase.auth.getUser()
       if (user) {
         setUserId(user.id)
-        const { data: mappingData } = await supabase
-          .from('user_to_account_mapping')
-          .select('account_id')
-          .eq('user_id', user.id)
-          .single()
-        if (mappingData) setAccountId(mappingData.account_id)
       }
     }
     fetchUser()
@@ -453,11 +446,11 @@ const FileUploadDemo = () => {
   }, [recordedAudioBlob, userId, supabase])
 
   // 중복 요청 확인 함수 - 모든 진행 중인 상태 확인
-  const checkDuplicateRequest = async (accountId: string, input_text: string, reference_id: string) => {
+  const checkDuplicateRequest = async (userId: string, input_text: string, reference_id: string) => {
     const { data, error } = await supabase
       .from('tts_requests')
       .select('request_id, status')
-      .eq('account_id', accountId)
+      .eq('user_id', userId)
       .eq('input_text', input_text)
       .eq('reference_id', reference_id)
       .in('status', ['pending', 'processing'])
@@ -471,7 +464,7 @@ const FileUploadDemo = () => {
     // 진행 중인 요청이 있으면 중복으로 판단
     if (data && data.length > 0) {
       console.log('중복 요청 감지:', {
-        accountId,
+        userId,
         input_text,
         reference_id,
         existingRequests: data
@@ -482,15 +475,15 @@ const FileUploadDemo = () => {
     return false
   }
 
-  // ref_voices에 오디오 업로드 후 ref_id 받아오기
+  // ref_audios에 오디오 업로드 후 ref_id 받아오기
   const uploadReferenceAudioAndGetRefId = async (filePath: string, signedUrl: string) => {
-    if (!accountId) return null;
+    if (!userId) return null;
     
-    // ref_voices에 insert
+    // ref_audios에 insert
     const { data, error } = await supabase
-      .from('ref_voices')
+      .from('ref_audios')
       .insert({
-        account_id: accountId,
+        user_id: userId,
         ref_file_url: signedUrl,
         ref_file_path: filePath,
         is_public: false,
@@ -508,12 +501,12 @@ const FileUploadDemo = () => {
   }
 
   // 텍스트와 오디오 조합으로 중복 요청 사전 확인
-  const checkDuplicateByTextAndAudio = async (accountId: string, input_text: string, audioSource: string) => {
+  const checkDuplicateByTextAndAudio = async (userId: string, input_text: string, audioSource: string) => {
     // 텍스트와 오디오 소스 조합으로 먼저 확인
     const { data, error } = await supabase
       .from('tts_requests')
       .select('request_id, status, created_at')
-      .eq('account_id', accountId)
+      .eq('user_id', userId)
       .eq('input_text', input_text)
       .in('status', ['pending', 'processing'])
       .gte('created_at', new Date(Date.now() - 60000).toISOString()) // 최근 1분 이내
@@ -529,7 +522,7 @@ const FileUploadDemo = () => {
 
   // 통합된 TTS 시작 함수 - 모든 오디오 소스 처리
   const startTTS = useCallback(async () => {
-    if (!accountId || !gen_text.trim()) {
+    if (!userId || !gen_text.trim()) {
       setErrorMessage('계정 정보 또는 텍스트가 없습니다.')
       return
     }
@@ -549,7 +542,7 @@ const FileUploadDemo = () => {
                          selectedPresetAudio ? selectedPresetAudio : 
                          usedAudioFile ? usedAudioFile : 'upload'
       
-      const isEarlyDuplicate = await checkDuplicateByTextAndAudio(accountId, gen_text, audioSource)
+      const isEarlyDuplicate = await checkDuplicateByTextAndAudio(userId, gen_text, audioSource)
       if (isEarlyDuplicate) {
         setErrorMessage('동일한 텍스트로 최근에 요청이 처리 중입니다. 잠시 후 다시 시도해주세요.')
         setIsProcessing(false)
@@ -596,7 +589,7 @@ const FileUploadDemo = () => {
 
       signedUrl = data.signedUrl
 
-      // 3단계: ref_voices에 insert 후 ref_id 받아오기
+      // 3단계: ref_audios에 insert 후 ref_id 받아오기
       const ref_id = await uploadReferenceAudioAndGetRefId(filePath, signedUrl)
       if (!ref_id) {
         setIsProcessing(false)
@@ -604,7 +597,7 @@ const FileUploadDemo = () => {
       }
 
       // 4단계: 정확한 중복 요청 확인
-      const isDuplicate = await checkDuplicateRequest(accountId, gen_text, ref_id)
+      const isDuplicate = await checkDuplicateRequest(userId, gen_text, ref_id)
       if (isDuplicate) {
         setErrorMessage('동일한 요청이 이미 처리 중입니다.')
         setIsProcessing(false)
@@ -621,7 +614,7 @@ const FileUploadDemo = () => {
           reference_id: ref_id,
           reference_audio_url: signedUrl,
           input_text: gen_text,
-          account_id: accountId
+          user_id: userId
         })
         
         const { data: functionData, error: functionError } = await supabase.functions.invoke('rapid-worker', {
@@ -629,7 +622,7 @@ const FileUploadDemo = () => {
             reference_id: ref_id,
             reference_audio_url: signedUrl,
             input_text: gen_text,
-            account_id: accountId
+            user_id: userId
           }
         })
 
@@ -680,7 +673,7 @@ const FileUploadDemo = () => {
       setIsProcessing(false)
     }
   }, [
-    accountId, 
+    userId, 
     gen_text, 
     recordedAudioBlob, 
     selectedPresetAudio, 
@@ -696,12 +689,12 @@ const FileUploadDemo = () => {
   // 파일 업로드 성공 시 호출되는 함수 (기존 구조 유지)
   const onUploadSuccess = useCallback(
     async (uploadedFileUrls: string[]) => {
-      if (!accountId || uploadedFileUrls.length === 0) return
+      if (!userId || uploadedFileUrls.length === 0) return
       
       // 파일 업로드가 완료되면 startTTS 함수를 호출
       await startTTS()
     },
-    [accountId, startTTS]
+    [userId, startTTS]
   )
 
 

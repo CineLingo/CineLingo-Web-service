@@ -10,19 +10,19 @@ import ShareButton from '@/components/ShareButton'
 
 type TTSRequestDetail = {
   request_id: string
-  account_id: string
+  user_id: string
   reference_id: string | null
   input_text: string
   status: string
   created_at: string
   updated_at: string
   error_message?: string
-  ref_voices?: { ref_file_url: string }[]
+  ref_audios?: { ref_file_url: string }[]
   gen_audios?: { gen_file_url: string; gen_file_path: string }[]
 }
 
 export default function TTSResultDetailPage() {
-  const [accountId, setAccountId] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
   const [ttsRequest, setTtsRequest] = useState<TTSRequestDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -35,25 +35,20 @@ export default function TTSResultDetailPage() {
     const fetchUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        const { data: mappingData } = await supabase
-          .from('user_to_account_mapping')
-          .select('account_id')
-          .eq('user_id', user.id)
-          .single()
-        if (mappingData) setAccountId(mappingData.account_id)
+        setUserId(user.id)
       }
     }
     fetchUser()
   }, [supabase])
 
   const fetchTTSRequest = useCallback(async () => {
-    if (!accountId || !ttsId) return
+    if (!userId || !ttsId) return
     
     const { data, error } = await supabase
       .from('tts_requests')
       .select(`
         request_id, 
-        account_id, 
+        user_id, 
         reference_id, 
         input_text, 
         status, 
@@ -62,7 +57,7 @@ export default function TTSResultDetailPage() {
         gen_audios(gen_file_url, gen_file_path)
       `)
       .eq('request_id', ttsId)
-      .eq('account_id', accountId)
+      .eq('user_id', userId)
       .single()
     
     if (error) {
@@ -78,19 +73,19 @@ export default function TTSResultDetailPage() {
     }
     
     // 참조 오디오 별도로 가져오기
-    let refVoiceData = null;
+    let refAudioData = null;
     if (data.reference_id) {
-      const { data: refVoice } = await supabase
-        .from('ref_voices')
+      const { data: refAudio } = await supabase
+        .from('ref_audios')
         .select('ref_file_url')
         .eq('ref_id', data.reference_id)
         .single()
-      refVoiceData = refVoice ? [refVoice] : null;
+      refAudioData = refAudio ? [refAudio] : null;
     }
     
-    setTtsRequest({ ...data, ref_voices: refVoiceData } as TTSRequestDetail)
+    setTtsRequest({ ...data, ref_audios: refAudioData } as TTSRequestDetail)
     setLoading(false)
-  }, [accountId, ttsId, supabase])
+  }, [userId, ttsId, supabase])
 
   // 특정 TTS 요청 불러오기
   useEffect(() => {
@@ -99,7 +94,7 @@ export default function TTSResultDetailPage() {
 
   // 자동 새로고침
   useEffect(() => {
-    if (!accountId || !ttsId) return
+    if (!userId || !ttsId) return
     const channel = supabase
       .channel(`tts-request-detail-${ttsId}`)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tts_requests', filter: `request_id=eq.${ttsId}` }, () => {
@@ -109,7 +104,7 @@ export default function TTSResultDetailPage() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [accountId, ttsId, supabase, fetchTTSRequest])
+  }, [userId, ttsId, supabase, fetchTTSRequest])
 
   // 다운로드 함수
   const handleDownload = async (url: string, filename?: string) => {
@@ -304,13 +299,13 @@ export default function TTSResultDetailPage() {
           </div>
 
           {/* 참조 오디오 */}
-          {ttsRequest.ref_voices && ttsRequest.ref_voices.length > 0 && (
+          {ttsRequest.ref_audios && ttsRequest.ref_audios.length > 0 && (
             <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">참조 오디오</h2>
               <div className="w-full">
                 <audio 
                   controls 
-                  src={ttsRequest.ref_voices[0].ref_file_url} 
+                  src={ttsRequest.ref_audios[0].ref_file_url} 
                   className="w-full h-12 sm:h-14"
                   preload="metadata"
                 />

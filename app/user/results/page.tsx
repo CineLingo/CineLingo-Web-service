@@ -23,7 +23,6 @@ type TTSRequestRow = {
 
 export default function UserResultsPage() {
   const [userId, setUserId] = useState<string | null>(null)
-  const [accountId, setAccountId] = useState<string | null>(null)
   const [rows, setRows] = useState<TTSRequestRow[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedText, setSelectedText] = useState<string | null>(null)
@@ -43,20 +42,14 @@ export default function UserResultsPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         setUserId(user.id)
-        const { data: mappingData } = await supabase
-          .from('user_to_account_mapping')
-          .select('account_id')
-          .eq('user_id', user.id)
-          .single()
-        if (mappingData) setAccountId(mappingData.account_id)
       }
     }
     fetchUser()
   }, [supabase])
 
-  // account_id로 모든 TTS 요청 불러오기
+  // user_id로 모든 TTS 요청 불러오기
   const fetchRows = useCallback(async () => {
-    if (!accountId) return
+    if (!userId) return
     const { data, error } = await supabase
       .from('tts_requests')
       .select(`
@@ -68,7 +61,7 @@ export default function UserResultsPage() {
         updated_at,
         gen_audios(gen_file_url, gen_file_path)
       `)
-      .eq('account_id', accountId)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false })
     
     console.log('Fetched data:', data)
@@ -77,15 +70,15 @@ export default function UserResultsPage() {
     setRows((data as TTSRequestRow[]) || [])
     setLoading(false)
     setRefreshing(false)
-  }, [accountId, supabase])
+  }, [userId, supabase])
 
   useEffect(() => {
     fetchRows()
-  }, [accountId, supabase, fetchRows])
+  }, [userId, supabase, fetchRows])
 
   // 자동 새로고침
   useEffect(() => {
-    if (!accountId) return;
+    if (!userId) return;
 
     const channel = supabase
       .channel('custom-all-channel')
@@ -93,7 +86,7 @@ export default function UserResultsPage() {
         event: '*',
         schema: 'public',
         table: 'tts_requests',
-        filter: `account_id=eq.${accountId}`
+        filter: `user_id=eq.${userId}`
       }, () => {
         fetchRows();
       })
@@ -102,7 +95,7 @@ export default function UserResultsPage() {
     return () => {
       supabase.removeChannel(channel);
     }
-  }, [accountId, supabase]);
+  }, [userId, supabase]);
 
   // 새로고침 함수
   const handleRefresh = () => {
@@ -315,7 +308,7 @@ export default function UserResultsPage() {
       <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8 mb-8">
         <ProfileAvatarUploader
           bucketName="avatars"
-          path={accountId ? accountId : ''}
+          path={userId ? userId : ''}
           avatarUrl={profile?.avatar_url ? `${profile.avatar_url}?t=${Date.now()}` : undefined}
           onAvatarUploaded={handleAvatarUploaded}
         />
@@ -397,7 +390,7 @@ export default function UserResultsPage() {
       <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8 mb-8">
         <ProfileAvatarUploader
           bucketName="avatars"
-          path={accountId ? accountId : ''}
+          path={userId ? userId : ''}
           avatarUrl={profile?.avatar_url ? `${profile.avatar_url}?t=${Date.now()}` : undefined}
           onAvatarUploaded={handleAvatarUploaded}
         />
