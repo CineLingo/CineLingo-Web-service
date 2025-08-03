@@ -501,7 +501,7 @@ const FileUploadDemo = () => {
   }
 
   // 텍스트와 오디오 조합으로 중복 요청 사전 확인
-  const checkDuplicateByTextAndAudio = async (userId: string, input_text: string, audioSource: string) => {
+  const checkDuplicateByTextAndAudio = async (userId: string, input_text: string) => {
     // 텍스트와 오디오 소스 조합으로 먼저 확인
     const { data, error } = await supabase
       .from('tts_requests')
@@ -538,11 +538,7 @@ const FileUploadDemo = () => {
 
     try {
       // 0단계: 텍스트 기준 사전 중복 확인
-      const audioSource = recordedAudioBlob ? 'recorded' : 
-                         selectedPresetAudio ? selectedPresetAudio : 
-                         usedAudioFile ? usedAudioFile : 'upload'
-      
-      const isEarlyDuplicate = await checkDuplicateByTextAndAudio(userId, gen_text, audioSource)
+      const isEarlyDuplicate = await checkDuplicateByTextAndAudio(userId, gen_text)
       if (isEarlyDuplicate) {
         setErrorMessage('동일한 텍스트로 최근에 요청이 처리 중입니다. 잠시 후 다시 시도해주세요.')
         setIsProcessing(false)

@@ -34,11 +34,16 @@ export default function AudioPlayerWithRealWaveform({
         const arrayBuffer = await response.arrayBuffer()
         
         if (!audioContextRef.current) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
+          const AudioContextClass = window.AudioContext || (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+          if (AudioContextClass) {
+            audioContextRef.current = new AudioContextClass()
+          }
         }
         
         const audioContext = audioContextRef.current
+        if (!audioContext) {
+          throw new Error('AudioContext가 초기화되지 않았습니다.')
+        }
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer)
         
         // 웨이브폼 데이터 추출
