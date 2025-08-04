@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Download, Eye, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react'
+import { Download, Eye, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw, Volume2, Mic } from 'lucide-react'
 import Link from 'next/link'
 import HomeButton from '@/components/home-button'
 import AudioPlayer from '@/components/AudioPlayer'
@@ -19,7 +19,8 @@ type TTSRequestRow = {
   created_at: string
   updated_at: string
   error_log?: string
-  gen_audios?: { gen_file_url: string; gen_file_path: string }[]
+  gen_audios?: { gen_file_url: string; gen_file_path: string; gen_text: string }[]
+  ref_audios?: { ref_file_url: string; ref_text: string; ref_duration: number }[]
 }
 
 export default function UserResultsPage() {
@@ -35,7 +36,8 @@ export default function UserResultsPage() {
   const [editName, setEditName] = useState('')
   const [editMode, setEditMode] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [nameError, setNameError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'tts' | 'reference'>('tts')
 
   // 로그인한 사용자 정보 가져오기
   useEffect(() => {
@@ -51,7 +53,9 @@ export default function UserResultsPage() {
   // user_id로 모든 TTS 요청 불러오기
   const fetchRows = useCallback(async () => {
     if (!userId) return
-    const { data, error } = await supabase
+    
+    // TTS 요청 데이터 가져오기
+    const { data: ttsData, error: ttsError } = await supabase
       .from('tts_requests')
       .select(`
         request_id, 
@@ -61,15 +65,52 @@ export default function UserResultsPage() {
         created_at, 
         updated_at,
         error_log,
-        gen_audios(gen_file_url, gen_file_path)
+        gen_audios(gen_file_url, gen_file_path, gen_text)
       `)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
     
-    console.log('Fetched data:', data)
-    console.log('Fetch error:', error)
+    if (ttsError) {
+      console.error('TTS 데이터 가져오기 오류:', ttsError)
+      setLoading(false)
+      setRefreshing(false)
+      return
+    }
     
-    setRows((data as TTSRequestRow[]) || [])
+    // 참조 오디오 정보 가져오기
+    const processedData = await Promise.all(
+      (ttsData || []).map(async (row) => {
+        let refAudioData = null
+        if (row.reference_id) {
+          console.log(`참조 오디오 조회 중: reference_id = ${row.reference_id}`)
+          const { data: refAudio, error: refError } = await supabase
+            .from('ref_audios')
+            .select('ref_file_url, ref_text, ref_duration')
+            .eq('ref_id', row.reference_id)
+            .single()
+          
+          if (refError) {
+            console.error(`참조 오디오 조회 오류 (ref_id: ${row.reference_id}):`, refError)
+          } else if (refAudio) {
+            console.log(`참조 오디오 조회 성공 (ref_id: ${row.reference_id}):`, refAudio)
+            refAudioData = [refAudio]
+          } else {
+            console.log(`참조 오디오 없음 (ref_id: ${row.reference_id})`)
+          }
+        } else {
+          console.log(`reference_id가 null인 항목: ${row.request_id}`)
+        }
+        
+        return {
+          ...row,
+          ref_audios: refAudioData
+        }
+      })
+    )
+    
+    console.log('Fetched data:', processedData)
+    
+    setRows(processedData as TTSRequestRow[])
     setLoading(false)
     setRefreshing(false)
   }, [userId, supabase])
@@ -356,6 +397,70 @@ export default function UserResultsPage() {
           )}
         </div>
       </div>
+      {/* 뷰 모드 스위칭 버튼 */}
+      <div className="flex items-center justify-center mb-8">
+        <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl p-1 shadow-lg">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setViewMode('tts')}
+              className={`flex items-center gap-3 px-6 py-4 rounded-xl transition-all duration-300 transform hover:scale-105 ${
+                viewMode === 'tts'
+                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/25'
+                  : 'bg-transparent text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-white dark:hover:bg-gray-700'
+              }`}
+            >
+              <div className={`p-2 rounded-lg ${
+                viewMode === 'tts' 
+                  ? 'bg-white/20' 
+                  : 'bg-gray-200 dark:bg-gray-700'
+              }`}>
+                <Volume2 size={isMobile ? 20 : 24} />
+              </div>
+              <div className="flex flex-col items-start">
+                <span className={`font-semibold text-sm sm:text-base ${
+                  viewMode === 'tts' ? 'text-white' : 'text-gray-700 dark:text-gray-300'
+                }`}>
+                  TTS 음성
+                </span>
+                <span className={`text-xs ${
+                  viewMode === 'tts' ? 'text-white/80' : 'text-gray-500 dark:text-gray-500'
+                }`}>
+                  생성된 음성
+                </span>
+              </div>
+            </button>
+            <button
+              onClick={() => setViewMode('reference')}
+              className={`flex items-center gap-3 px-6 py-4 rounded-xl transition-all duration-300 transform hover:scale-105 ${
+                viewMode === 'reference'
+                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/25'
+                  : 'bg-transparent text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-white dark:hover:bg-gray-700'
+              }`}
+            >
+              <div className={`p-2 rounded-lg ${
+                viewMode === 'reference' 
+                  ? 'bg-white/20' 
+                  : 'bg-gray-200 dark:bg-gray-700'
+              }`}>
+                <Mic size={isMobile ? 20 : 24} />
+              </div>
+              <div className="flex flex-col items-start">
+                <span className={`font-semibold text-sm sm:text-base ${
+                  viewMode === 'reference' ? 'text-white' : 'text-gray-700 dark:text-gray-300'
+                }`}>
+                  참조 음성
+                </span>
+                <span className={`text-xs ${
+                  viewMode === 'reference' ? 'text-white/80' : 'text-gray-500 dark:text-gray-500'
+                }`}>
+                  원본 음성
+                </span>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div className="text-center">
         <h1 className="text-xl sm:text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">보이스북</h1>
         <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">아직 TTS 요청이 없습니다.</p>
@@ -440,7 +545,71 @@ export default function UserResultsPage() {
           )}
         </div>
       </div>
-      {/* 기존 TTS 결과 리스트 렌더링 부분은 그대로 유지 */}
+      {/* 뷰 모드 스위칭 버튼 */}
+      <div className="flex items-center justify-center mb-8">
+        <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl p-1 shadow-lg">
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setViewMode('tts')}
+              className={`flex items-center gap-3 px-6 py-4 rounded-xl transition-all duration-300 transform hover:scale-105 ${
+                viewMode === 'tts'
+                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/25'
+                  : 'bg-transparent text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-white dark:hover:bg-gray-700'
+              }`}
+            >
+              <div className={`p-2 rounded-lg ${
+                viewMode === 'tts' 
+                  ? 'bg-white/20' 
+                  : 'bg-gray-200 dark:bg-gray-700'
+              }`}>
+                <Volume2 size={isMobile ? 20 : 24} />
+              </div>
+              <div className="flex flex-col items-start">
+                <span className={`font-semibold text-sm sm:text-base ${
+                  viewMode === 'tts' ? 'text-white' : 'text-gray-700 dark:text-gray-300'
+                }`}>
+                  TTS 음성
+                </span>
+                <span className={`text-xs ${
+                  viewMode === 'tts' ? 'text-white/80' : 'text-gray-500 dark:text-gray-500'
+                }`}>
+                  생성된 음성
+                </span>
+              </div>
+            </button>
+            <button
+              onClick={() => setViewMode('reference')}
+              className={`flex items-center gap-3 px-6 py-4 rounded-xl transition-all duration-300 transform hover:scale-105 ${
+                viewMode === 'reference'
+                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/25'
+                  : 'bg-transparent text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-white dark:hover:bg-gray-700'
+              }`}
+            >
+              <div className={`p-2 rounded-lg ${
+                viewMode === 'reference' 
+                  ? 'bg-white/20' 
+                  : 'bg-gray-200 dark:bg-gray-700'
+              }`}>
+                <Mic size={isMobile ? 20 : 24} />
+              </div>
+              <div className="flex flex-col items-start">
+                <span className={`font-semibold text-sm sm:text-base ${
+                  viewMode === 'reference' ? 'text-white' : 'text-gray-700 dark:text-gray-300'
+                }`}>
+                  참조 음성
+                </span>
+                <span className={`text-xs ${
+                  viewMode === 'reference' ? 'text-white/80' : 'text-gray-500 dark:text-gray-500'
+                }`}>
+                  원본 음성
+                </span>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* TTS 결과 리스트 */}
       <div className="grid gap-3 sm:gap-4">
                  {rows.map((row, i) => {
            const statusInfo = getStatusInfo(row.status)
@@ -449,6 +618,7 @@ export default function UserResultsPage() {
            console.log(`Row ${i}:`, {
              status: row.status,
              gen_audios: row.gen_audios,
+             ref_audios: row.ref_audios,
              request_id: row.request_id
            })
            
@@ -462,98 +632,165 @@ export default function UserResultsPage() {
                 {formatDate(row.created_at)}
               </div>
 
-              {/* 요청한 텍스트 */}
-              <div className="mb-3 sm:mb-4">
-                <p 
-                  className="text-gray-900 dark:text-gray-100 text-sm leading-relaxed cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-                  onClick={() => {
-                    setSelectedText(row.input_text)
-                    setShowTextModal(true)
-                  }}
-                >
-                  {truncateText(row.input_text, isMobile ? 1 : 2)}
-                </p>
-              </div>
+              {/* TTS 뷰 모드 */}
+              {viewMode === 'tts' && (
+                <>
+                  {/* 생성된 텍스트 (gen_text) */}
+                  <div className="mb-3 sm:mb-4">
+                    <p 
+                      className="text-gray-900 dark:text-gray-100 text-sm leading-relaxed cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                      onClick={() => {
+                        const textToShow = row.gen_audios && row.gen_audios.length > 0 && row.gen_audios[0].gen_text 
+                          ? row.gen_audios[0].gen_text 
+                          : row.input_text
+                        setSelectedText(textToShow)
+                        setShowTextModal(true)
+                      }}
+                    >
+                      {row.gen_audios && row.gen_audios.length > 0 && row.gen_audios[0].gen_text 
+                        ? truncateText(row.gen_audios[0].gen_text, isMobile ? 1 : 2)
+                        : truncateText(row.input_text, isMobile ? 1 : 2)
+                      }
+                    </p>
+                  </div>
 
-                            {/* 플레이 바 & 재생시간 */}
-              <div className="mb-3 sm:mb-4">
-                {/* 생성된 오디오가 있으면 플레이어 표시 */}
-                {row.gen_audios && row.gen_audios.length > 0 ? (
-                  <div className="w-full">
-                    <AudioPlayer 
-                      audioUrl={`${row.gen_audios[0].gen_file_url}?t=${Date.now()}`} 
-                      width={isMobile ? 350 : 400} 
-                      height={isMobile ? 60 : 50}
+                  {/* 플레이 바 & 재생시간 */}
+                  <div className="mb-3 sm:mb-4">
+                    {/* 생성된 오디오가 있으면 플레이어 표시 */}
+                    {row.gen_audios && row.gen_audios.length > 0 ? (
+                      <div className="w-full">
+                        <AudioPlayer 
+                          audioUrl={`${row.gen_audios[0].gen_file_url}?t=${Date.now()}`} 
+                          width={isMobile ? 350 : 400} 
+                          height={isMobile ? 60 : 50}
+                        />
+                      </div>
+                    ) : (
+                     <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
+                       {statusInfo.icon}
+                       <span className={statusInfo.color}>{statusInfo.text}</span>
+                     </div>
+                   )}
+                  </div>
+
+                  {/* 버튼 영역 */}
+                  <div className="flex items-center justify-between gap-2">
+                    {/* 다운로드 버튼 또는 진행 중 표시 */}
+                    {row.status === 'processing' || row.status === 'in_progress' || row.status === 'pending' ? (
+                      <div className="flex-1 h-12 sm:h-11 flex items-center justify-center gap-2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-sm rounded-lg">
+                        <RefreshCw size={16} className="animate-spin" />
+                        <span className="hidden sm:inline">진행 중</span>
+                        <span className="sm:hidden">진행</span>
+                      </div>
+                    ) : row.status === 'failed' || row.status === 'fail' ? (
+                      <div 
+                        className="flex-1 h-12 sm:h-11 flex items-center justify-center gap-2 bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg relative group"
+                        title={row.error_log || '처리 중 오류가 발생했습니다'}
+                      >
+                        <XCircle size={16} />
+                        <span className="hidden sm:inline">실패</span>
+                        <span className="sm:hidden">실패</span>
+                        {row.error_log && (
+                          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 max-w-xs break-words z-10">
+                            {row.error_log}
+                            <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-gray-100"></div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          console.log('Download clicked for row:', row);
+                          if (row.gen_audios && row.gen_audios.length > 0) {
+                            handleDownload(row.gen_audios[0].gen_file_url, `tts-generated-${i + 1}.mp3`);
+                          } else {
+                            alert(`음성 파일을 찾을 수 없습니다. Status: ${row.status}, Gen audios: ${JSON.stringify(row.gen_audios)}`);
+                          }
+                        }}
+                        className="flex-1 h-12 sm:h-11 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm rounded-lg transition-colors"
+                        title="음성 파일 다운로드"
+                      >
+                        <Download size={16} />
+                        <span className="hidden sm:inline">다운로드</span>
+                        <span className="sm:hidden">다운</span>
+                      </button>
+                    )}
+                    
+                    {/* 공유 버튼 */}
+                    <ShareButton
+                      ttsId={row.request_id}
+                      text=""
+                      variant="default"
+                      size="sm"
+                      className="h-12 w-12 sm:h-11 sm:w-11 flex items-center justify-center bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded-lg transition-colors"
                     />
+                    
+                    <Link
+                      href={`/user/results/${row.request_id}`}
+                      className="h-12 w-12 sm:h-11 sm:w-11 flex items-center justify-center bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded-lg transition-colors"
+                      title="상세 보기"
+                    >
+                      <Eye size={18} />
+                    </Link>
                   </div>
-                ) : (
-                 <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
-                   {statusInfo.icon}
-                   <span className={statusInfo.color}>{statusInfo.text}</span>
-                 </div>
-               )}
-              </div>
+                </>
+              )}
 
-              {/* 버튼 영역 */}
-              <div className="flex items-center justify-between gap-2">
-                {/* 다운로드 버튼 또는 진행 중 표시 */}
-                {row.status === 'processing' || row.status === 'in_progress' || row.status === 'pending' ? (
-                  <div className="flex-1 h-12 sm:h-11 flex items-center justify-center gap-2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-sm rounded-lg">
-                    <RefreshCw size={16} className="animate-spin" />
-                    <span className="hidden sm:inline">진행 중</span>
-                    <span className="sm:hidden">진행</span>
+              {/* 참조 오디오 뷰 모드 */}
+              {viewMode === 'reference' && (
+                <>
+                  {/* 참조 텍스트 */}
+                  <div className="mb-3 sm:mb-4">
+                    <p className="text-gray-900 dark:text-gray-100 text-sm leading-relaxed">
+                      {row.ref_audios && row.ref_audios.length > 0 
+                        ? truncateText(row.ref_audios[0].ref_text || '참조 텍스트 없음', isMobile ? 1 : 2)
+                        : '참조 오디오 없음'
+                      }
+                    </p>
                   </div>
-                ) : row.status === 'failed' || row.status === 'fail' ? (
-                  <div 
-                    className="flex-1 h-12 sm:h-11 flex items-center justify-center gap-2 bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg relative group"
-                    title={row.error_log || '처리 중 오류가 발생했습니다'}
-                  >
-                    <XCircle size={16} />
-                    <span className="hidden sm:inline">실패</span>
-                    <span className="sm:hidden">실패</span>
-                    {row.error_log && (
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 max-w-xs break-words z-10">
-                        {row.error_log}
-                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-gray-100"></div>
+
+                  {/* 참조 오디오 플레이어 */}
+                  <div className="mb-3 sm:mb-4">
+                    {row.ref_audios && row.ref_audios.length > 0 ? (
+                      <div className="w-full">
+                        {(() => {
+                          console.log('참조 오디오 URL:', row.ref_audios[0].ref_file_url);
+                          return null;
+                        })()}
+                        <audio 
+                          controls 
+                          src={row.ref_audios[0].ref_file_url} 
+                          className="w-full h-12 sm:h-14"
+                          preload="metadata"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
+                        <Mic size={16} />
+                        <span>참조 오디오 없음</span>
                       </div>
                     )}
                   </div>
-                ) : (
-                  <button
-                    onClick={() => {
-                      console.log('Download clicked for row:', row);
-                      if (row.gen_audios && row.gen_audios.length > 0) {
-                        handleDownload(row.gen_audios[0].gen_file_url, `tts-generated-${i + 1}.mp3`);
-                      } else {
-                        alert(`음성 파일을 찾을 수 없습니다. Status: ${row.status}, Gen audios: ${JSON.stringify(row.gen_audios)}`);
-                      }
-                    }}
-                    className="flex-1 h-12 sm:h-11 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm rounded-lg transition-colors"
-                    title="음성 파일 다운로드"
-                  >
-                    <Download size={16} />
-                    <span className="hidden sm:inline">다운로드</span>
-                    <span className="sm:hidden">다운</span>
-                  </button>
-                )}
-                
-                {/* 공유 버튼 - 항상 표시 (디버깅용) */}
-                <ShareButton
-                  ttsId={row.request_id}
-                  text=""
-                  variant="default"
-                  size="sm"
-                  className="h-12 w-12 sm:h-11 sm:w-11 flex items-center justify-center bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded-lg transition-colors"
-                />
-                
-                <Link
-                  href={`/user/results/${row.request_id}`}
-                  className="h-12 w-12 sm:h-11 sm:w-11 flex items-center justify-center bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded-lg transition-colors"
-                  title="상세 보기"
-                >
-                  <Eye size={18} />
-                </Link>
-              </div>
+
+                  {/* 참조 오디오용 버튼 영역 - 공유 버튼만 */}
+                  <div className="flex items-center justify-center">
+                                         {row.ref_audios && row.ref_audios.length > 0 ? (
+                       <ShareButton
+                         ttsId={row.request_id}
+                         text=""
+                         variant="default"
+                         size="lg"
+                         className="w-full h-12 sm:h-11 flex items-center justify-center bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm rounded-lg transition-colors"
+                       />
+                     ) : (
+                      <div className="w-full h-12 sm:h-11 flex items-center justify-center gap-2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-sm rounded-lg">
+                        <Mic size={16} />
+                        <span>참조 오디오 없음</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )
         })}
