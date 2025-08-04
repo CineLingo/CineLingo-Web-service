@@ -2,6 +2,10 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  // 프로덕션 환경에서 console.log 제거
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
   // 개발 환경에서 로컬 서버 설정
   experimental: {
     turbo: {
