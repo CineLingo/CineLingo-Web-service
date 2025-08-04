@@ -43,6 +43,11 @@ export default function ShareButton({
 
   // 버튼 스타일 클래스
   const getButtonClasses = () => {
+    // className이 제공되면 그것을 우선 사용
+    if (className) {
+      return className
+    }
+    
     const baseClasses = "inline-flex items-center gap-2 font-medium transition-all duration-300"
     
     const sizeClasses = {
@@ -57,7 +62,7 @@ export default function ShareButton({
       ghost: "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
     }
 
-    return `${baseClasses} ${sizeClasses[size]} ${variantClasses[variant]} ${className}`
+    return `${baseClasses} ${sizeClasses[size]} ${variantClasses[variant]}`
   }
 
   return (

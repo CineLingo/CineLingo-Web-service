@@ -490,29 +490,43 @@ export default function UserResultsPage() {
 
               {/* 버튼 영역 */}
               <div className="flex items-center justify-between gap-2">
-                {/* 다운로드 버튼 - 항상 표시 (디버깅용) */}
-                <button
-                  onClick={() => {
-                    console.log('Download clicked for row:', row);
-                    if (row.gen_audios && row.gen_audios.length > 0) {
-                      handleDownload(row.gen_audios[0].gen_file_url, `tts-generated-${i + 1}.mp3`);
-                    } else {
-                      alert(`음성 파일을 찾을 수 없습니다. Status: ${row.status}, Gen audios: ${JSON.stringify(row.gen_audios)}`);
-                    }
-                  }}
-                  className="flex-1 h-12 sm:h-11 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm rounded-lg transition-colors"
-                  title="음성 파일 다운로드"
-                >
-                  <Download size={16} />
-                  <span className="hidden sm:inline">다운로드</span>
-                  <span className="sm:hidden">다운</span>
-                </button>
+                {/* 다운로드 버튼 또는 진행 중 표시 */}
+                {row.status === 'processing' || row.status === 'in_progress' || row.status === 'pending' ? (
+                  <div className="flex-1 h-12 sm:h-11 flex items-center justify-center gap-2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-sm rounded-lg">
+                    <RefreshCw size={16} className="animate-spin" />
+                    <span className="hidden sm:inline">진행 중</span>
+                    <span className="sm:hidden">진행</span>
+                  </div>
+                ) : row.status === 'failed' || row.status === 'fail' ? (
+                  <div className="flex-1 h-12 sm:h-11 flex items-center justify-center gap-2 bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg">
+                    <XCircle size={16} />
+                    <span className="hidden sm:inline">실패</span>
+                    <span className="sm:hidden">실패</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      console.log('Download clicked for row:', row);
+                      if (row.gen_audios && row.gen_audios.length > 0) {
+                        handleDownload(row.gen_audios[0].gen_file_url, `tts-generated-${i + 1}.mp3`);
+                      } else {
+                        alert(`음성 파일을 찾을 수 없습니다. Status: ${row.status}, Gen audios: ${JSON.stringify(row.gen_audios)}`);
+                      }
+                    }}
+                    className="flex-1 h-12 sm:h-11 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm rounded-lg transition-colors"
+                    title="음성 파일 다운로드"
+                  >
+                    <Download size={16} />
+                    <span className="hidden sm:inline">다운로드</span>
+                    <span className="sm:hidden">다운</span>
+                  </button>
+                )}
                 
                 {/* 공유 버튼 - 항상 표시 (디버깅용) */}
                 <ShareButton
                   ttsId={row.request_id}
                   text=""
-                  variant="ghost"
+                  variant="default"
                   size="sm"
                   className="h-12 w-12 sm:h-11 sm:w-11 flex items-center justify-center bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded-lg transition-colors"
                 />
