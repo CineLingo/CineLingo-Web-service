@@ -26,10 +26,8 @@ export default function ShareRefPage() {
   const [refAudio, setRefAudio] = useState<RefAudioDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null)
   const [showShareModal, setShowShareModal] = useState(false)
   const [addingToShared, setAddingToShared] = useState(false)
   const [addSuccess, setAddSuccess] = useState(false)
@@ -120,11 +118,8 @@ export default function ShareRefPage() {
       })
       
       audio.addEventListener('ended', () => {
-        setIsPlaying(false)
         setCurrentTime(0)
       })
-      
-      setAudioElement(audio)
       
       return () => {
         audio.pause()
@@ -135,17 +130,7 @@ export default function ShareRefPage() {
     }
   }, [refAudio?.ref_file_url])
 
-  // 재생/일시정지 토글
-  const togglePlay = () => {
-    if (!audioElement) return
-    
-    if (isPlaying) {
-      audioElement.pause()
-    } else {
-      audioElement.play()
-    }
-    setIsPlaying(!isPlaying)
-  }
+  // 재생/일시정지 토글 (사용되지 않음 - 제거)
 
   // 진행률 표시
   const formatTime = (time: number) => {
@@ -228,7 +213,7 @@ export default function ShareRefPage() {
         child_user_id: currentUserId
       }
       
-      const { data: insertResult, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from('shared_ref_audios')
         .insert(insertData)
         .select('shared_id, ref_id, child_user_id')

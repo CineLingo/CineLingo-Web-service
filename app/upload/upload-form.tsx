@@ -898,6 +898,7 @@ const FileUploadDemo = () => {
     selectedPresetAudio, 
     usedAudioFile,
     selectedMyVoice,
+    selectedSharedVoice,
     isProcessing,
     uploadRecordedAudio,
     uploadPresetAudio,
