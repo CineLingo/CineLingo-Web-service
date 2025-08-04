@@ -3,9 +3,11 @@
 import { Dropzone, DropzoneContent, DropzoneEmptyState } from '@/components/dropzone'
 import { createClient } from '@/lib/supabase/client'
 import { useSupabaseUpload } from '@/hooks/use-supabase-upload'
+import { useQueueMonitor } from '@/hooks/use-queue-monitor'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Play, Pause, Mic, Square, RotateCcw, Music } from 'lucide-react'
+import { QueueStatusDisplay } from '@/components/QueueStatusDisplay'
 
 // Supabase Storage list 반환 객체 타입 정의
 type StorageObject = {
@@ -98,10 +100,28 @@ const FileUploadDemo = () => {
   
   // 이전에 사용한 음성 리스트 상태 및 표시 여부 상태 추가
   const [usedAudioFiles, setUsedAudioFiles] = useState<Array<{ name: string; file: string }>>([])
+  
+  // TTS 요청 상태 관리
+  const [currentRequestId, setCurrentRequestId] = useState<string | null>(null)
   const [showUsedAudioList, setShowUsedAudioList] = useState(false)
   
   const supabase = createClient()
   const router = useRouter()
+
+  // useQueueMonitor 훅 사용
+  const { isCompleted } = useQueueMonitor({ 
+    requestId: currentRequestId, 
+    enabled: !!currentRequestId 
+  })
+
+  // 완료 감지 시 네비게이션
+  useEffect(() => {
+    if (isCompleted && currentRequestId) {
+      console.log('✅ TTS completed, navigating to results page...')
+      // 즉시 결과 페이지로 이동
+      router.push('/user/results')
+    }
+  }, [isCompleted, currentRequestId, router])
 
   // audioUrl이 변경될 때마다 ref 업데이트
   useEffect(() => {
@@ -646,7 +666,22 @@ const FileUploadDemo = () => {
             return
           }
           
+          // 큐 정보 저장
+          console.log('Function data received:', functionData)
+          if (functionData?.queue_info) {
+            console.log('Queue info received:', functionData.queue_info)
+            setCurrentRequestId(requestId)
+            // 즉시 큐 정보를 useQueueMonitor에 전달
+            console.log('✅ Queue info immediately available')
+          } else {
+            console.log('No queue info in response, setting requestId anyway')
+            setCurrentRequestId(requestId)
+          }
+          
           console.log('Request ID from Edge Function:', requestId)
+          
+          // useQueueMonitor가 큐 상태를 관리하므로 별도 폴링 제거
+          console.log('🔄 Queue monitoring handled by useQueueMonitor hook')
         }
       } catch (functionError) {
         console.error('Error calling TTS Runner function:', functionError)
@@ -659,9 +694,6 @@ const FileUploadDemo = () => {
         setIsProcessing(false)
         return
       }
-
-      // 7단계: 결과 목록 페이지로 이동
-      router.push(`/user/results`)
       
     } catch (error) {
       console.error('TTS 처리 중 오류:', error)
@@ -1199,6 +1231,15 @@ const FileUploadDemo = () => {
                   </span>
                 </div>
               </div>
+
+              {/* 큐 상태 표시 */}
+              {currentRequestId && (
+                <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <QueueStatusDisplay requestId={currentRequestId} />
+                </div>
+              )}
+              {/* 디버깅용 로그 */}
+              {(() => { console.log('currentRequestId:', currentRequestId); return null; })()}
 
               {/* TTS 생성 시작 버튼 */}
               <button
