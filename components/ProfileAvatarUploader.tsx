@@ -186,6 +186,8 @@ const ProfileAvatarUploader: React.FC<ProfileAvatarUploaderProps> = ({
           <span>사진 변경</span>
         </div>
         <input
+          id="avatar-upload-input"
+          name="avatar-upload-input"
           ref={inputRef}
           type="file"
           accept="image/*"

@@ -104,6 +104,8 @@ export default function ShareButton({
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">공유 링크</p>
                 <div className="flex items-center gap-2">
                   <input
+                    id="share-url-input"
+                    name="share-url-input"
                     type="text"
                     value={shareUrl}
                     readOnly

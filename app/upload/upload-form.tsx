@@ -1180,6 +1180,8 @@ const FileUploadDemo = () => {
                 )}
                 
                 <textarea
+                  id="tts-text-input"
+                  name="tts-text-input"
                   value={gen_text}
                   onChange={(e) => {
                     const value = e.target.value;

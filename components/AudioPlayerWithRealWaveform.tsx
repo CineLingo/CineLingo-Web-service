@@ -219,6 +219,8 @@ export default function AudioPlayerWithRealWaveform({
       <div className="flex-shrink-0 flex items-center gap-2">
         <Volume2 size={16} className="text-gray-500" />
         <input
+          id="volume-control"
+          name="volume-control"
           type="range"
           min="0"
           max="1"

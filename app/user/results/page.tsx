@@ -324,6 +324,8 @@ export default function UserResultsPage() {
                   <span className="text-gray-500 text-sm mb-1">닉네임은 15자 이하로 입력할 수 있습니다.</span>
                   <div className="flex gap-2 w-full">
                     <Input
+                      id="edit-display-name-1"
+                      name="edit-display-name-1"
                       value={editName}
                       onChange={e => setEditName(e.target.value)}
                       className="flex-1"
@@ -406,6 +408,8 @@ export default function UserResultsPage() {
                   <span className="text-gray-500 text-sm mb-1">닉네임은 15자 이하로 입력할 수 있습니다.</span>
                   <div className="flex gap-2 w-full">
                     <Input
+                      id="edit-display-name-2"
+                      name="edit-display-name-2"
                       value={editName}
                       onChange={e => setEditName(e.target.value)}
                       className="flex-1"
