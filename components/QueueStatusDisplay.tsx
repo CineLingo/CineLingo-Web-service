@@ -41,24 +41,7 @@ export function QueueStatusDisplay({ requestId, className = '' }: QueueStatusDis
     )
   }
 
-  // 사용자 친화적 메시지 생성
-  const getStatusMessage = () => {
-    if (!queueInfo) return '큐 상태를 확인하는 중...'
-    
-    if (isCompleted) {
-      return queueInfo.status === 'completed' ? '처리가 완료되었습니다!' : '처리에 실패했습니다.'
-    }
-    
-    if (isProcessing) {
-      return '현재 처리 중입니다...'
-    }
-    
-    if (isWaiting) {
-      return `현재 ${queueInfo.position || 0}번째로 대기 중입니다`
-    }
-    
-    return '큐 상태를 확인하는 중...'
-  }
+  // 사용자 친화적 메시지 생성 (사용하지 않으므로 제거)
 
   if (isCompleted) {
     return (

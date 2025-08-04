@@ -772,7 +772,10 @@ const FileUploadDemo = () => {
     uploadPresetAudio,
     handleUsedAudioFile,
     supabase, 
-    router
+    router,
+    checkDuplicateByTextAndAudio,
+    checkDuplicateRequest,
+    uploadReferenceAudioAndGetRefId
   ])
 
   // 파일 업로드 성공 시 호출되는 함수 (기존 구조 유지)

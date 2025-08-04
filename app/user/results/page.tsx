@@ -138,7 +138,7 @@ export default function UserResultsPage() {
     return () => {
       supabase.removeChannel(channel);
     }
-  }, [userId, supabase]);
+  }, [userId, supabase, fetchRows]);
 
   // 새로고침 함수
   const handleRefresh = () => {
@@ -281,7 +281,7 @@ export default function UserResultsPage() {
       setProfileLoading(false);
     };
     fetchProfile();
-  }, [userId]);
+  }, [userId, supabase]);
 
   // 닉네임 저장
   const handleSaveName = async () => {
