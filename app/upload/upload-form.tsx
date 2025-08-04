@@ -100,6 +100,20 @@ const FileUploadDemo = () => {
   const [usedAudioFiles, setUsedAudioFiles] = useState<Array<{ name: string; file: string }>>([])
   const [showUsedAudioList, setShowUsedAudioList] = useState(false)
   
+  // 1. 상태 추가
+  const [myVoices, setMyVoices] = useState<Array<{
+    ref_id: string;
+    ref_file_url: string;
+    ref_file_path: string;
+    created_at: string;
+  }>>([])
+  const [showMyVoices, setShowMyVoices] = useState(false)
+  const [selectedMyVoice, setSelectedMyVoice] = useState<{
+    ref_id: string;
+    ref_file_url: string;
+    ref_file_path: string;
+  } | null>(null)
+  
   const supabase = createClient()
   const router = useRouter()
 
@@ -520,6 +534,43 @@ const FileUploadDemo = () => {
     return data && data.length > 0
   }
 
+  // 2. 내 음성 목록 불러오기 함수
+  const fetchMyVoices = useCallback(async () => {
+    if (!userId) return;
+    try {
+      const { data, error } = await supabase
+        .from('ref_audios')
+        .select('ref_id, ref_file_url, ref_file_path, created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      if (error) {
+        setErrorMessage('내 음성 목록을 불러오지 못했습니다.');
+        return;
+      }
+      if (data) setMyVoices(data);
+    } catch {
+      setErrorMessage('내 음성 목록을 불러오는 중 오류가 발생했습니다.');
+    }
+  }, [userId, supabase]);
+
+  // 3. 내 음성 선택 핸들러
+  const handleMyVoiceSelect = useCallback((voice: { ref_id: string; ref_file_url: string; ref_file_path: string; created_at: string }) => {
+    setSelectedMyVoice(voice);
+    setAudioUrl(voice.ref_file_url);
+    setShowPreview(true);
+    setCurrentStep('preview');
+    setAudioElement(new Audio(voice.ref_file_url));
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+    setRecordedAudioBlob(null);
+    setAudioChunks([]);
+    setRecordingTime(0);
+    setSelectedPresetAudio(null);
+    setUsedAudioFile(null);
+    setShowMyVoices(false);
+  }, []);
+
   // 통합된 TTS 시작 함수 - 모든 오디오 소스 처리
   const startTTS = useCallback(async () => {
     if (!userId || !gen_text.trim()) {
@@ -547,9 +598,15 @@ const FileUploadDemo = () => {
 
       let filePath: string | null = null
       let signedUrl: string | null = null
+      let ref_id: string | null = null
 
       // 1단계: 오디오 소스에 따라 처리
-      if (recordedAudioBlob) {
+      // 내 음성 분기
+      if (selectedMyVoice) {
+        filePath = selectedMyVoice.ref_file_path;
+        signedUrl = selectedMyVoice.ref_file_url;
+        ref_id = selectedMyVoice.ref_id;
+      } else if (recordedAudioBlob) {
         // 녹음된 오디오 처리
         filePath = await uploadRecordedAudio()
       } else if (selectedPresetAudio) {
@@ -571,29 +628,32 @@ const FileUploadDemo = () => {
       }
 
       // 2단계: signed URL 생성
-      const { data, error: urlError } = await supabase
-        .storage
-        .from('prototype')
-        .createSignedUrl(filePath, 60 * 60 * 24 * 30) // 30일
+      // 내 음성 외에는 signedUrl/ref_id 생성
+      if (!selectedMyVoice) {
+        const { data, error: urlError } = await supabase
+          .storage
+          .from('prototype')
+          .createSignedUrl(filePath, 60 * 60 * 24 * 30) // 30일
 
-      if (urlError || !data?.signedUrl) {
-        console.error('Error creating signed URL:', urlError?.message)
-        setErrorMessage('Signed URL 생성에 실패했습니다.')
-        setIsProcessing(false)
-        return
-      }
+        if (urlError || !data?.signedUrl) {
+          console.error('Error creating signed URL:', urlError?.message)
+          setErrorMessage('Signed URL 생성에 실패했습니다.')
+          setIsProcessing(false)
+          return
+        }
 
-      signedUrl = data.signedUrl
+        signedUrl = data.signedUrl
 
-      // 3단계: ref_audios에 insert 후 ref_id 받아오기
-      const ref_id = await uploadReferenceAudioAndGetRefId(filePath, signedUrl)
-      if (!ref_id) {
-        setIsProcessing(false)
-        return
+        // 3단계: ref_audios에 insert 후 ref_id 받아오기
+        ref_id = await uploadReferenceAudioAndGetRefId(filePath, signedUrl)
+        if (!ref_id) {
+          setIsProcessing(false)
+          return
+        }
       }
 
       // 4단계: 정확한 중복 요청 확인
-      const isDuplicate = await checkDuplicateRequest(userId, gen_text, ref_id)
+      const isDuplicate = await checkDuplicateRequest(userId, gen_text, ref_id!)
       if (isDuplicate) {
         setErrorMessage('동일한 요청이 이미 처리 중입니다.')
         setIsProcessing(false)
@@ -674,6 +734,7 @@ const FileUploadDemo = () => {
     recordedAudioBlob, 
     selectedPresetAudio, 
     usedAudioFile,
+    selectedMyVoice,
     isProcessing,
     uploadRecordedAudio,
     uploadPresetAudio,
@@ -1050,17 +1111,64 @@ const FileUploadDemo = () => {
                   <DropzoneContent />
                 </Dropzone>
               </div>
+
+              {/* 내 음성 버튼 */}
+              <button
+                onClick={async () => {
+                  if (!showMyVoices) await fetchMyVoices();
+                  setShowMyVoices(!showMyVoices);
+                }}
+                className="w-full mt-3 py-3 px-4 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg font-medium hover:from-yellow-600 hover:to-orange-600 transition-all duration-200 flex items-center justify-center space-x-2 touch-manipulation"
+              >
+                <Music size={18} className="sm:w-5 sm:h-5" />
+                <span className="text-sm sm:text-base">내 음성</span>
+              </button>
+              {showMyVoices && (
+                <div className="mt-4 space-y-2 max-h-60 overflow-y-auto">
+                  {myVoices.length === 0 ? (
+                    <div className="text-xs text-gray-500 dark:text-gray-400">저장된 내 음성이 없습니다.</div>
+                  ) : (
+                    myVoices.map((voice, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleMyVoiceSelect(voice)}
+                        className="w-full p-3 text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-manipulation"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2 sm:space-x-3">
+                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full flex items-center justify-center">
+                              <Music size={14} className="sm:w-4 sm:h-4 text-white" />
+                            </div>
+                            <div className="text-left flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                {voice.ref_file_path.split('/').pop()}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {new Date(voice.created_at).toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-400 dark:text-gray-500 ml-2">
+                            선택
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
           )}
 
           {/* Step 2: 미리듣기 */}
           {(() => {
-            const shouldShowPreview = currentStep === 'preview' && (showPreview || selectedPresetAudio || usedAudioFile)
+            const shouldShowPreview = currentStep === 'preview' && (showPreview || selectedPresetAudio || usedAudioFile || selectedMyVoice)
             console.log('미리듣기 조건 확인:', {
               currentStep,
               showPreview,
               selectedPresetAudio,
               usedAudioFile,
+              selectedMyVoice,
               shouldShowPreview
             })
             return shouldShowPreview
@@ -1072,6 +1180,7 @@ const FileUploadDemo = () => {
                   {recordedAudioBlob ? '녹음 완료 · 미리듣기' : 
                    selectedPresetAudio ? '미리 준비된 음성 · 미리듣기' : 
                    usedAudioFile ? '이전 사용 음성 · 미리듣기' :
+                   selectedMyVoice ? '내 음성 · 미리듣기' :
                    '업로드 완료 · 미리듣기'}
                 </span>
                 <button
@@ -1079,6 +1188,7 @@ const FileUploadDemo = () => {
                     restartRecordingWithFileReset()
                     setSelectedPresetAudio(null)
                     setUsedAudioFile(null)
+                    setSelectedMyVoice(null)
                   }}
                   className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                 >
