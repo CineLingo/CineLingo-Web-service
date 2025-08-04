@@ -17,7 +17,6 @@ type TTSRequestDetail = {
   created_at: string
   updated_at: string
   error_log?: string
-  error_message?: string
   ref_audios?: { ref_file_url: string }[]
   gen_audios?: { gen_file_url: string; gen_file_path: string }[]
 }
@@ -397,20 +396,7 @@ export default function TTSResultDetailPage() {
             </div>
           )}
 
-          {/* 오류 메시지 */}
-          {ttsRequest.error_message && (
-            <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-red-600 dark:text-red-400 flex items-center gap-2">
-                <AlertCircle size={20} />
-                오류 메시지
-              </h2>
-              <div className="bg-red-50 dark:bg-red-900/20 p-3 sm:p-4 rounded-lg">
-                <p className="text-red-700 dark:text-red-300 whitespace-pre-wrap text-sm leading-relaxed">
-                  {ttsRequest.error_message}
-                </p>
-              </div>
-            </div>
-          )}
+
         </div>
       </div>
     </div>

@@ -16,7 +16,6 @@ type TTSRequestDetail = {
   created_at: string
   updated_at: string
   error_log?: string
-  error_message?: string
   ref_audios?: { ref_file_url: string }[]
   gen_audios?: { gen_file_url: string; gen_file_path: string }[]
 }
@@ -103,7 +102,6 @@ export default function SharePage() {
           created_at: ttsData.created_at,
           updated_at: ttsData.updated_at || ttsData.created_at,
           error_log: ttsData.error_log,
-          error_message: undefined,
           ref_audios: refAudioData || [],
           gen_audios: genAudioData || []
         }
