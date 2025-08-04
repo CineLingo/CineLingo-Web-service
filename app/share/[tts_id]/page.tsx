@@ -15,6 +15,7 @@ type TTSRequestDetail = {
   status: string
   created_at: string
   updated_at: string
+  error_log?: string
   error_message?: string
   ref_audios?: { ref_file_url: string }[]
   gen_audios?: { gen_file_url: string; gen_file_path: string }[]
@@ -42,7 +43,7 @@ export default function SharePage() {
         // 먼저 TTS 요청 정보 가져오기
         const { data: ttsData, error: ttsError } = await supabase
           .from('tts_requests')
-          .select('request_id, user_id, reference_id, input_text, created_at, waited_time, status, updated_at')
+          .select('request_id, user_id, reference_id, input_text, created_at, waited_time, status, updated_at, error_log')
           .eq('request_id', ttsId)
           .single()
 
@@ -101,6 +102,7 @@ export default function SharePage() {
           status: ttsData.status,
           created_at: ttsData.created_at,
           updated_at: ttsData.updated_at || ttsData.created_at,
+          error_log: ttsData.error_log,
           error_message: undefined,
           ref_audios: refAudioData || [],
           gen_audios: genAudioData || []
@@ -337,9 +339,24 @@ export default function SharePage() {
               </div>
             ) : (
               <div className="text-center py-6 sm:py-8">
-                <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">
-                  음성 파일을 찾을 수 없습니다.
-                </p>
+                {ttsRequest.status === 'fail' || ttsRequest.status === 'failed' ? (
+                  <div className="space-y-3">
+                    <p className="text-red-600 dark:text-red-400 text-sm sm:text-base font-medium">
+                      음성 생성에 실패했습니다.
+                    </p>
+                    {ttsRequest.error_log && (
+                      <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
+                        <p className="text-red-700 dark:text-red-300 text-xs leading-relaxed whitespace-pre-wrap">
+                          {ttsRequest.error_log}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">
+                    음성 파일을 찾을 수 없습니다.
+                  </p>
+                )}
               </div>
             )}
           </div>

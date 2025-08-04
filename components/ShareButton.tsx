@@ -43,7 +43,7 @@ export default function ShareButton({
 
   // 버튼 스타일 클래스
   const getButtonClasses = () => {
-    // className이 제공되면 그것을 우선 사용
+    // className이 제공되면 그것을 우선 사용 (완전한 커스텀 스타일)
     if (className) {
       return className
     }

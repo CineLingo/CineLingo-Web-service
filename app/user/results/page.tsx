@@ -18,6 +18,7 @@ type TTSRequestRow = {
   status: string
   created_at: string
   updated_at: string
+  error_log?: string
   gen_audios?: { gen_file_url: string; gen_file_path: string }[]
 }
 
@@ -59,6 +60,7 @@ export default function UserResultsPage() {
         status, 
         created_at, 
         updated_at,
+        error_log,
         gen_audios(gen_file_url, gen_file_path)
       `)
       .eq('user_id', userId)
@@ -498,10 +500,19 @@ export default function UserResultsPage() {
                     <span className="sm:hidden">진행</span>
                   </div>
                 ) : row.status === 'failed' || row.status === 'fail' ? (
-                  <div className="flex-1 h-12 sm:h-11 flex items-center justify-center gap-2 bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg">
+                  <div 
+                    className="flex-1 h-12 sm:h-11 flex items-center justify-center gap-2 bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm rounded-lg relative group"
+                    title={row.error_log || '처리 중 오류가 발생했습니다'}
+                  >
                     <XCircle size={16} />
                     <span className="hidden sm:inline">실패</span>
                     <span className="sm:hidden">실패</span>
+                    {row.error_log && (
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 p-2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 max-w-xs break-words z-10">
+                        {row.error_log}
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-gray-100"></div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <button

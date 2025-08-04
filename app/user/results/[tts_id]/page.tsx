@@ -16,6 +16,7 @@ type TTSRequestDetail = {
   status: string
   created_at: string
   updated_at: string
+  error_log?: string
   error_message?: string
   ref_audios?: { ref_file_url: string }[]
   gen_audios?: { gen_file_url: string; gen_file_path: string }[]
@@ -54,6 +55,7 @@ export default function TTSResultDetailPage() {
         status, 
         created_at, 
         updated_at, 
+        error_log,
         gen_audios(gen_file_url, gen_file_path)
       `)
       .eq('request_id', ttsId)
@@ -285,6 +287,16 @@ export default function TTSResultDetailPage() {
                   {formatDate(ttsRequest.created_at)}
                 </p>
               </div>
+              {ttsRequest.updated_at && ttsRequest.updated_at !== ttsRequest.created_at && (
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                    최종 업데이트
+                  </label>
+                  <p className="text-sm text-gray-900 dark:text-gray-100">
+                    {formatDate(ttsRequest.updated_at)}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -341,13 +353,14 @@ export default function TTSResultDetailPage() {
                     <Download size={16} />
                     음성 파일 다운로드
                   </button>
-                  <ShareButton 
-                    ttsId={ttsRequest.request_id}
-                    text="공유하기"
-                    variant="outline"
-                    size="md"
-                    className="flex-1 sm:flex-none"
-                  />
+                  <div className="flex-1 sm:flex-none">
+                    <ShareButton 
+                      ttsId={ttsRequest.request_id}
+                      text="공유하기"
+                      variant="outline"
+                      size="md"
+                    />
+                  </div>
                 </div>
               </div>
             ) : (
@@ -359,12 +372,40 @@ export default function TTSResultDetailPage() {
             )}
           </div>
 
+          {/* 오류 로그 */}
+          {ttsRequest.error_log && (
+            <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-red-600 dark:text-red-400 flex items-center gap-2">
+                <AlertCircle size={20} />
+                오류 로그
+              </h2>
+              <div className="bg-red-50 dark:bg-red-900/20 p-3 sm:p-4 rounded-lg">
+                <div className="mb-3">
+                  <label className="block text-xs font-medium text-red-600 dark:text-red-400 mb-2">
+                    상세 오류 정보
+                  </label>
+                  <div className="bg-white dark:bg-gray-800 border border-red-200 dark:border-red-800 rounded p-3">
+                    <pre className="text-red-700 dark:text-red-300 text-xs leading-relaxed whitespace-pre-wrap font-mono overflow-x-auto">
+                      {ttsRequest.error_log}
+                    </pre>
+                  </div>
+                </div>
+                <div className="text-xs text-red-600 dark:text-red-400">
+                  <p>💡 이 오류 정보는 문제 해결을 위해 개발팀에 전달됩니다.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* 오류 메시지 */}
           {ttsRequest.error_message && (
             <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-red-600 dark:text-red-400">오류 정보</h2>
+              <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-red-600 dark:text-red-400 flex items-center gap-2">
+                <AlertCircle size={20} />
+                오류 메시지
+              </h2>
               <div className="bg-red-50 dark:bg-red-900/20 p-3 sm:p-4 rounded-lg">
-                <p className="text-red-700 dark:text-red-300 whitespace-pre-wrap text-sm sm:text-base leading-relaxed">
+                <p className="text-red-700 dark:text-red-300 whitespace-pre-wrap text-sm leading-relaxed">
                   {ttsRequest.error_message}
                 </p>
               </div>

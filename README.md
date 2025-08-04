@@ -110,6 +110,7 @@ Custom Text-to-Speech (TTS) web application built with Next.js, Supabase, and mo
        waited_time real,
        status USER-DEFINED,
        updated_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
+       error_log text,
        CONSTRAINT tts_requests_pkey PRIMARY KEY (request_id),
        CONSTRAINT tts_requests_reference_id_fkey FOREIGN KEY (reference_id) REFERENCES public.ref_audios(ref_id),
        CONSTRAINT tts_requests_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(user_id)
