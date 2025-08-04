@@ -105,7 +105,7 @@ const FileUploadDemo = () => {
   const [currentRequestId, setCurrentRequestId] = useState<string | null>(null)
   const [showUsedAudioList, setShowUsedAudioList] = useState(false)
   
-  // 1. 상태 추가
+  // 1. 내 음성 상태 추가
   const [myVoices, setMyVoices] = useState<Array<{
     ref_id: string;
     ref_file_url: string;
@@ -114,6 +114,24 @@ const FileUploadDemo = () => {
   }>>([])
   const [showMyVoices, setShowMyVoices] = useState(false)
   const [selectedMyVoice, setSelectedMyVoice] = useState<{
+    ref_id: string;
+    ref_file_url: string;
+    ref_file_path: string;
+  } | null>(null)
+  
+  // 2. 공유 음성 상태 추가
+  const [sharedVoices, setSharedVoices] = useState<Array<{
+    ref_id: string;
+    ref_file_url: string;
+    ref_file_path: string;
+    created_at: string;
+    shared_by_user?: {
+      display_name?: string;
+      email: string;
+    };
+  }>>([])
+  const [showSharedVoices, setShowSharedVoices] = useState(false)
+  const [selectedSharedVoice, setSelectedSharedVoice] = useState<{
     ref_id: string;
     ref_file_url: string;
     ref_file_path: string;
@@ -520,7 +538,7 @@ const FileUploadDemo = () => {
         user_id: userId,
         ref_file_url: signedUrl,
         ref_file_path: filePath,
-        is_public: false,
+        // is_public은 기본값 true를 사용
       })
       .select('ref_id')
       .single();
@@ -576,6 +594,7 @@ const FileUploadDemo = () => {
   // 3. 내 음성 선택 핸들러
   const handleMyVoiceSelect = useCallback((voice: { ref_id: string; ref_file_url: string; ref_file_path: string; created_at: string }) => {
     setSelectedMyVoice(voice);
+    setSelectedSharedVoice(null);
     setAudioUrl(voice.ref_file_url);
     setShowPreview(true);
     setCurrentStep('preview');
@@ -589,7 +608,114 @@ const FileUploadDemo = () => {
     setSelectedPresetAudio(null);
     setUsedAudioFile(null);
     setShowMyVoices(false);
+    setShowSharedVoices(false);
   }, []);
+
+  // 4. 공유 음성 목록 불러오기 함수
+  const fetchSharedVoices = useCallback(async () => {
+    if (!userId) return;
+    try {
+      // 먼저 shared_ref_audios에서 ref_id 목록 가져오기
+      const { data: sharedData, error: sharedError } = await supabase
+        .from('shared_ref_audios')
+        .select('ref_id')
+        .eq('child_user_id', userId);
+      
+      if (sharedError) {
+        console.error('공유 음성 목록 불러오기 오류:', sharedError);
+        setErrorMessage('공유 음성 목록을 불러오지 못했습니다.');
+        return;
+      }
+      
+      if (sharedData && sharedData.length > 0) {
+        const refIds = sharedData.map(item => item.ref_id);
+        
+        // ref_audios에서 상세 정보 가져오기
+        const { data: refData, error: refError } = await supabase
+          .from('ref_audios')
+          .select('ref_id, ref_file_url, ref_file_path, created_at, user_id')
+          .in('ref_id', refIds);
+        
+        if (refError) {
+          console.error('참조 음성 정보 불러오기 오류:', refError);
+          return;
+        }
+        
+        if (refData) {
+          // 사용자 정보 가져오기
+          const userIds = [...new Set(refData.map(item => item.user_id))];
+          
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('user_id, display_name, email')
+            .in('user_id', userIds);
+          
+          if (userError) {
+            console.error('사용자 정보 불러오기 오류:', userError);
+          }
+          
+          const userMap = new Map();
+          if (userData) {
+            userData.forEach(user => {
+              userMap.set(user.user_id, user);
+            });
+          }
+          
+          const processedData = refData.map(ref => {
+            const sharedByUser = userMap.get(ref.user_id) || { display_name: '익명 사용자', email: 'unknown@example.com' };
+            
+            return {
+              ref_id: ref.ref_id,
+              ref_file_url: ref.ref_file_url,
+              ref_file_path: ref.ref_file_path,
+              created_at: ref.created_at,
+              shared_by_user: sharedByUser
+            };
+          });
+          
+          setSharedVoices(processedData);
+        }
+      } else {
+        setSharedVoices([]);
+      }
+    } catch (error) {
+      console.error('공유 음성 목록 불러오기 중 오류:', error);
+      console.error('에러 상세 정보:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        error: error
+      });
+      setErrorMessage('공유 음성 목록을 불러오는 중 오류가 발생했습니다.');
+    }
+  }, [userId, supabase]);
+
+  // 5. 공유 음성 선택 핸들러
+  const handleSharedVoiceSelect = useCallback((voice: { ref_id: string; ref_file_url: string; ref_file_path: string; created_at: string }) => {
+    setSelectedSharedVoice(voice);
+    setSelectedMyVoice(null);
+    setAudioUrl(voice.ref_file_url);
+    setShowPreview(true);
+    setCurrentStep('preview');
+    setAudioElement(new Audio(voice.ref_file_url));
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+    setRecordedAudioBlob(null);
+    setAudioChunks([]);
+    setRecordingTime(0);
+    setSelectedPresetAudio(null);
+    setUsedAudioFile(null);
+    setShowMyVoices(false);
+    setShowSharedVoices(false);
+  }, []);
+
+  // 사용자 ID가 설정되면 내 음성과 공유 음성 목록 불러오기
+  useEffect(() => {
+    if (userId) {
+      fetchMyVoices()
+      fetchSharedVoices()
+    }
+  }, [userId, fetchMyVoices, fetchSharedVoices])
 
   // 통합된 TTS 시작 함수 - 모든 오디오 소스 처리
   const startTTS = useCallback(async () => {
@@ -626,6 +752,11 @@ const FileUploadDemo = () => {
         filePath = selectedMyVoice.ref_file_path;
         signedUrl = selectedMyVoice.ref_file_url;
         ref_id = selectedMyVoice.ref_id;
+      } else if (selectedSharedVoice) {
+        // 공유 음성 분기
+        filePath = selectedSharedVoice.ref_file_path;
+        signedUrl = selectedSharedVoice.ref_file_url;
+        ref_id = selectedSharedVoice.ref_id;
       } else if (recordedAudioBlob) {
         // 녹음된 오디오 처리
         filePath = await uploadRecordedAudio()
@@ -648,8 +779,8 @@ const FileUploadDemo = () => {
       }
 
       // 2단계: signed URL 생성
-      // 내 음성 외에는 signedUrl/ref_id 생성
-      if (!selectedMyVoice) {
+      // 내 음성과 공유 음성 외에는 signedUrl/ref_id 생성
+      if (!selectedMyVoice && !selectedSharedVoice) {
         const { data, error: urlError } = await supabase
           .storage
           .from('prototype')
@@ -1192,20 +1323,67 @@ const FileUploadDemo = () => {
                   )}
                 </div>
               )}
+
+              {/* 공유 음성 버튼 */}
+              <button
+                onClick={async () => {
+                  if (!showSharedVoices) await fetchSharedVoices();
+                  setShowSharedVoices(!showSharedVoices);
+                }}
+                className="w-full mt-3 py-3 px-4 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-lg font-medium hover:from-green-700 hover:to-teal-700 transition-all duration-200 flex items-center justify-center space-x-2 touch-manipulation"
+              >
+                <Music size={18} className="sm:w-5 sm:h-5" />
+                <span className="text-sm sm:text-base">공유 음성</span>
+              </button>
+              {showSharedVoices && (
+                <div className="mt-4 space-y-2 max-h-60 overflow-y-auto">
+                  {sharedVoices.length === 0 ? (
+                    <div className="text-xs text-gray-500 dark:text-gray-400">공유받은 음성이 없습니다.</div>
+                  ) : (
+                    sharedVoices.map((voice, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleSharedVoiceSelect(voice)}
+                        className="w-full p-3 text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors touch-manipulation"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2 sm:space-x-3">
+                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-green-400 to-teal-400 rounded-full flex items-center justify-center">
+                              <Music size={14} className="sm:w-4 sm:h-4 text-white" />
+                            </div>
+                            <div className="text-left flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                {voice.ref_file_path.split('/').pop()}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {voice.shared_by_user?.display_name || '익명 사용자'} • {new Date(voice.created_at).toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-400 dark:text-gray-500 ml-2">
+                            선택
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
           )}
 
           {/* Step 2: 미리듣기 */}
           {(() => {
-            const shouldShowPreview = currentStep === 'preview' && (showPreview || selectedPresetAudio || usedAudioFile || selectedMyVoice)
-            console.log('미리듣기 조건 확인:', {
-              currentStep,
-              showPreview,
-              selectedPresetAudio,
-              usedAudioFile,
-              selectedMyVoice,
-              shouldShowPreview
-            })
+            const shouldShowPreview = currentStep === 'preview' && (showPreview || selectedPresetAudio || usedAudioFile || selectedMyVoice || selectedSharedVoice)
+                          console.log('미리듣기 조건 확인:', {
+                currentStep,
+                showPreview,
+                selectedPresetAudio,
+                usedAudioFile,
+                selectedMyVoice,
+                selectedSharedVoice,
+                shouldShowPreview
+              })
             return shouldShowPreview
           })() && (
             <div className="space-y-4 sm:space-y-6">
@@ -1216,6 +1394,7 @@ const FileUploadDemo = () => {
                    selectedPresetAudio ? '미리 준비된 음성 · 미리듣기' : 
                    usedAudioFile ? '이전 사용 음성 · 미리듣기' :
                    selectedMyVoice ? '내 음성 · 미리듣기' :
+                   selectedSharedVoice ? '공유 음성 · 미리듣기' :
                    '업로드 완료 · 미리듣기'}
                 </span>
                 <button
@@ -1224,6 +1403,7 @@ const FileUploadDemo = () => {
                     setSelectedPresetAudio(null)
                     setUsedAudioFile(null)
                     setSelectedMyVoice(null)
+                    setSelectedSharedVoice(null)
                   }}
                   className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                 >

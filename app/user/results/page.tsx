@@ -7,6 +7,7 @@ import Link from 'next/link'
 import HomeButton from '@/components/home-button'
 import AudioPlayer from '@/components/AudioPlayer'
 import ShareButton from '@/components/ShareButton'
+import ShareRefButton from '@/components/ShareRefButton'
 import ProfileAvatarUploader from '@/components/ProfileAvatarUploader'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -772,17 +773,17 @@ export default function UserResultsPage() {
                     )}
                   </div>
 
-                  {/* 참조 오디오용 버튼 영역 - 공유 버튼만 */}
+                  {/* 참조 오디오용 버튼 영역 - 참조 음성 공유 버튼 */}
                   <div className="flex items-center justify-center">
-                                         {row.ref_audios && row.ref_audios.length > 0 ? (
-                       <ShareButton
-                         ttsId={row.request_id}
-                         text=""
-                         variant="default"
-                         size="lg"
-                         className="w-full h-12 sm:h-11 flex items-center justify-center bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm rounded-lg transition-colors"
-                       />
-                     ) : (
+                    {row.ref_audios && row.ref_audios.length > 0 && row.reference_id ? (
+                      <ShareRefButton
+                        refId={row.reference_id}
+                        text="참조 음성 공유"
+                        variant="default"
+                        size="lg"
+                        className="w-full h-12 sm:h-11 flex items-center justify-center bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white text-sm rounded-lg transition-colors"
+                      />
+                    ) : (
                       <div className="w-full h-12 sm:h-11 flex items-center justify-center gap-2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-sm rounded-lg">
                         <Mic size={16} />
                         <span>참조 오디오 없음</span>
