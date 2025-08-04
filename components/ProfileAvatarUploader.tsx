@@ -1,5 +1,4 @@
 import React, { useRef, useState, DragEvent } from 'react'
-import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 
 interface ProfileAvatarUploaderProps {
@@ -171,11 +170,10 @@ const ProfileAvatarUploader: React.FC<ProfileAvatarUploaderProps> = ({
         aria-label="아바타 업로드"
       >
         {avatarUrl ? (
-          <Image
+          <img
             src={avatarUrl}
             alt="아바타"
-            fill
-            className="object-cover select-none pointer-events-none"
+            className="object-cover w-full h-full select-none pointer-events-none"
             draggable={false}
           />
         ) : (
