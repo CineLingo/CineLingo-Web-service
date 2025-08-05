@@ -25,7 +25,7 @@ type TTSRequestRow = {
     gen_file_url: string; 
     gen_file_path: string; 
     gen_text: string;
-    gen_audio_duration?: number;
+    gen_duration?: number;
     gen_is_public: boolean;
     gen_shared_title?: string;
     gen_shared_image?: string;
@@ -77,7 +77,7 @@ export default function UserResultsPage() {
         created_at, 
         updated_at,
         error_log,
-        gen_audios(gen_file_url, gen_file_path, gen_text, gen_audio_duration, gen_is_public, gen_shared_title, gen_shared_image, ref_text_while_gen)
+        gen_audios(gen_file_url, gen_file_path, gen_text, gen_duration, gen_is_public, gen_shared_title, gen_shared_image, ref_text_while_gen)
       `)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })

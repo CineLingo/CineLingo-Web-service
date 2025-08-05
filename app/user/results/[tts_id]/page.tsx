@@ -23,7 +23,7 @@ type TTSRequestDetail = {
     gen_file_url: string; 
     gen_file_path: string;
     gen_text?: string;
-    gen_audio_duration?: number;
+    gen_duration?: number;
     gen_is_public: boolean;
     gen_shared_title?: string;
     gen_shared_image?: string;
@@ -66,7 +66,7 @@ export default function TTSResultDetailPage() {
         created_at, 
         updated_at, 
         error_log,
-        gen_audios(gen_file_url, gen_file_path, gen_text, gen_audio_duration, gen_is_public, gen_shared_title, gen_shared_image, ref_text_while_gen)
+        gen_audios(gen_file_url, gen_file_path, gen_text, gen_duration, gen_is_public, gen_shared_title, gen_shared_image, ref_text_while_gen)
       `)
       .eq('request_id', ttsId)
       .eq('user_id', userId)
@@ -368,13 +368,13 @@ export default function TTSResultDetailPage() {
                 
                 {/* 생성된 음성 정보 */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                  {ttsRequest.gen_audios[0].gen_audio_duration && (
+                  {ttsRequest.gen_audios[0].gen_duration && (
                     <div>
                       <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
                         재생 시간
                       </label>
                       <p className="text-gray-900 dark:text-gray-100">
-                        {Math.round(ttsRequest.gen_audios[0].gen_audio_duration)}초
+                        {Math.round(ttsRequest.gen_audios[0].gen_duration)}초
                       </p>
                     </div>
                   )}
