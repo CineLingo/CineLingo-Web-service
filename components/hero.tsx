@@ -48,7 +48,7 @@ export function Hero() {
           asChild 
           size="sm"
           variant="outline"
-          className="w-full text-sm sm:text-base px-6 py-4 h-auto transition-all duration-300 transform hover:scale-105 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl font-light"
+          className="w-full text-sm sm:text-base px-6 py-4 h-auto transition-all duration-300 transform hover:scale-105 border-gray-400 dark:border-gray-600 text-gray-700 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-800 dark:hover:text-gray-300 rounded-xl font-medium"
         >
           <Link href="/user/results">이전 결과 보기</Link>
         </Button>

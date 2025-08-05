@@ -177,8 +177,14 @@ const ProfileAvatarUploader: React.FC<ProfileAvatarUploaderProps> = ({
             draggable={false}
           />
         ) : (
-          <div className="flex items-center justify-center w-full h-full text-gray-400 text-4xl bg-gray-200 dark:bg-gray-700 select-none pointer-events-none">
-            <span>👤</span>
+          <div className="flex items-center justify-center w-full h-full text-gray-400 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 select-none pointer-events-none">
+            <svg 
+              className="w-12 h-12 text-gray-400 dark:text-gray-500" 
+              fill="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
           </div>
         )}
         {/* 마우스 오버/드래그 시에만 보임 */}
