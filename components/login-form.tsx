@@ -39,8 +39,8 @@ export function LoginForm({
         password,
       });
       if (error) throw error;
-      // 로그인 후 실제 서비스 페이지로 리다이렉트
-      router.push("/");
+      // 로그인 후 업로드 페이지로 리다이렉트
+      router.push("/upload");
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "오류가 발생했습니다");
     } finally {
