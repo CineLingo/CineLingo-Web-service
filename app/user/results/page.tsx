@@ -15,12 +15,22 @@ import { Button } from '@/components/ui/button'
 type TTSRequestRow = {
   request_id: string
   reference_id: string | null
-  input_text: string
+  ref_text_at_request: string
+  gen_text_at_request: string
   status: string
   created_at: string
   updated_at: string
   error_log?: string
-  gen_audios?: { gen_file_url: string; gen_file_path: string; gen_text: string }[]
+  gen_audios?: { 
+    gen_file_url: string; 
+    gen_file_path: string; 
+    gen_text: string;
+    gen_audio_duration?: number;
+    gen_is_public: boolean;
+    gen_shared_title?: string;
+    gen_shared_image?: string;
+    ref_text_while_gen?: string;
+  }[]
   ref_audios?: { ref_file_url: string; ref_text: string; ref_duration: number }[]
 }
 
@@ -61,12 +71,13 @@ export default function UserResultsPage() {
       .select(`
         request_id, 
         reference_id, 
-        input_text, 
+        ref_text_at_request,
+        gen_text_at_request,
         status, 
         created_at, 
         updated_at,
         error_log,
-        gen_audios(gen_file_url, gen_file_path, gen_text)
+        gen_audios(gen_file_url, gen_file_path, gen_text, gen_audio_duration, gen_is_public, gen_shared_title, gen_shared_image, ref_text_while_gen)
       `)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
@@ -643,14 +654,14 @@ export default function UserResultsPage() {
                       onClick={() => {
                         const textToShow = row.gen_audios && row.gen_audios.length > 0 && row.gen_audios[0].gen_text 
                           ? row.gen_audios[0].gen_text 
-                          : row.input_text
+                          : row.gen_text_at_request
                         setSelectedText(textToShow)
                         setShowTextModal(true)
                       }}
                     >
                       {row.gen_audios && row.gen_audios.length > 0 && row.gen_audios[0].gen_text 
                         ? truncateText(row.gen_audios[0].gen_text, isMobile ? 1 : 2)
-                        : truncateText(row.input_text, isMobile ? 1 : 2)
+                        : truncateText(row.gen_text_at_request, isMobile ? 1 : 2)
                       }
                     </p>
                   </div>

@@ -11,13 +11,23 @@ type TTSRequestDetail = {
   request_id: string
   user_id: string
   reference_id: string | null
-  gen_text: string
+  ref_text_at_request: string
+  gen_text_at_request: string
   status: string
   created_at: string
   updated_at: string
   error_log?: string
   ref_audios?: { ref_file_url: string }[]
-  gen_audios?: { gen_file_url: string; gen_file_path: string }[]
+  gen_audios?: { 
+    gen_file_url: string; 
+    gen_file_path: string;
+    gen_text?: string;
+    gen_audio_duration?: number;
+    gen_is_public: boolean;
+    gen_shared_title?: string;
+    gen_shared_image?: string;
+    ref_text_while_gen?: string;
+  }[]
 }
 
 export default function SharePage() {
@@ -42,7 +52,7 @@ export default function SharePage() {
         // 먼저 TTS 요청 정보 가져오기
         const { data: ttsData, error: ttsError } = await supabase
           .from('tts_requests')
-          .select('request_id, user_id, reference_id, input_text, created_at, waited_time, status, updated_at, error_log')
+          .select('request_id, user_id, reference_id, ref_text_at_request, gen_text_at_request, created_at, waited_time, status, updated_at, error_log')
           .eq('request_id', ttsId)
           .single()
 
@@ -69,7 +79,7 @@ export default function SharePage() {
         // 생성된 오디오 가져오기
         const { data: genAudioData, error: genAudioError } = await supabase
           .from('gen_audios')
-          .select('gen_file_url, gen_file_path, gen_text, gen_duration')
+          .select('gen_file_url, gen_file_path, gen_text, gen_audio_duration, gen_is_public, gen_shared_title, gen_shared_image, ref_text_while_gen')
           .eq('request_id', ttsData.request_id)
           .limit(1)
 
@@ -97,7 +107,8 @@ export default function SharePage() {
           request_id: ttsData.request_id,
           user_id: ttsData.user_id || '', 
           reference_id: ttsData.reference_id,
-          gen_text: ttsData.input_text,
+          ref_text_at_request: ttsData.ref_text_at_request,
+          gen_text_at_request: ttsData.gen_text_at_request,
           status: ttsData.status,
           created_at: ttsData.created_at,
           updated_at: ttsData.updated_at || ttsData.created_at,
@@ -170,7 +181,7 @@ export default function SharePage() {
   // 공유 기능
   const handleShare = async () => {
     const shareUrl = `${window.location.origin}/share/${ttsId}`
-    const shareText = `내가 만든 TTS 음성 들어보세요! "${ttsRequest?.gen_text.slice(0, 50)}..."`
+    const shareText = `내가 만든 TTS 음성 들어보세요! "${ttsRequest?.gen_text_at_request.slice(0, 50)}..."`
 
     if (navigator.share) {
       // 네이티브 공유 API 사용 (모바일)
@@ -291,12 +302,12 @@ export default function SharePage() {
             </div>
           </div>
 
-          {/* 입력 텍스트 */}
+          {/* 변환할 텍스트 */}
           <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">입력 텍스트</h2>
+            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">변환할 텍스트</h2>
             <div className="bg-gray-50 dark:bg-gray-700 p-3 sm:p-4 rounded-lg">
               <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 whitespace-pre-wrap leading-relaxed">
-                {ttsRequest.gen_text}
+                {ttsRequest.gen_text_at_request}
               </p>
             </div>
           </div>

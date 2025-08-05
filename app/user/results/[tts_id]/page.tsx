@@ -12,13 +12,23 @@ type TTSRequestDetail = {
   request_id: string
   user_id: string
   reference_id: string | null
-  input_text: string
+  ref_text_at_request: string
+  gen_text_at_request: string
   status: string
   created_at: string
   updated_at: string
   error_log?: string
   ref_audios?: { ref_file_url: string }[]
-  gen_audios?: { gen_file_url: string; gen_file_path: string }[]
+  gen_audios?: { 
+    gen_file_url: string; 
+    gen_file_path: string;
+    gen_text?: string;
+    gen_audio_duration?: number;
+    gen_is_public: boolean;
+    gen_shared_title?: string;
+    gen_shared_image?: string;
+    ref_text_while_gen?: string;
+  }[]
 }
 
 export default function TTSResultDetailPage() {
@@ -50,12 +60,13 @@ export default function TTSResultDetailPage() {
         request_id, 
         user_id, 
         reference_id, 
-        input_text, 
+        ref_text_at_request,
+        gen_text_at_request,
         status, 
         created_at, 
         updated_at, 
         error_log,
-        gen_audios(gen_file_url, gen_file_path)
+        gen_audios(gen_file_url, gen_file_path, gen_text, gen_audio_duration, gen_is_public, gen_shared_title, gen_shared_image, ref_text_while_gen)
       `)
       .eq('request_id', ttsId)
       .eq('user_id', userId)
@@ -84,7 +95,10 @@ export default function TTSResultDetailPage() {
       refAudioData = refAudio ? [refAudio] : null;
     }
     
-    setTtsRequest({ ...data, ref_audios: refAudioData } as TTSRequestDetail)
+    setTtsRequest({ 
+      ...data, 
+      ref_audios: refAudioData 
+    } as TTSRequestDetail)
     setLoading(false)
   }, [userId, ttsId, supabase])
 
@@ -299,12 +313,12 @@ export default function TTSResultDetailPage() {
             </div>
           </div>
 
-          {/* 입력 텍스트 */}
+          {/* 변환할 텍스트 */}
           <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">입력 텍스트</h2>
+            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">변환할 텍스트</h2>
             <div className="bg-gray-50 dark:bg-gray-700 p-3 sm:p-4 rounded-lg">
               <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 whitespace-pre-wrap leading-relaxed">
-                {ttsRequest.input_text}
+                {ttsRequest.gen_text_at_request}
               </p>
             </div>
           </div>
@@ -313,13 +327,27 @@ export default function TTSResultDetailPage() {
           {ttsRequest.ref_audios && ttsRequest.ref_audios.length > 0 && (
             <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
               <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">참조 오디오</h2>
-              <div className="w-full">
-                <audio 
-                  controls 
-                  src={ttsRequest.ref_audios[0].ref_file_url} 
-                  className="w-full h-12 sm:h-14"
-                  preload="metadata"
-                />
+              <div className="space-y-4">
+                <div className="w-full">
+                  <audio 
+                    controls 
+                    src={ttsRequest.ref_audios[0].ref_file_url} 
+                    className="w-full h-12 sm:h-14"
+                    preload="metadata"
+                  />
+                </div>
+                {ttsRequest.ref_text_at_request && (
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                      참조 음성 텍스트
+                    </label>
+                    <div className="bg-gray-50 dark:bg-gray-700 p-3 sm:p-4 rounded-lg">
+                      <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 whitespace-pre-wrap leading-relaxed">
+                        {ttsRequest.ref_text_at_request}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -337,6 +365,31 @@ export default function TTSResultDetailPage() {
                     preload="metadata"
                   />
                 </div>
+                
+                {/* 생성된 음성 정보 */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                  {ttsRequest.gen_audios[0].gen_audio_duration && (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        재생 시간
+                      </label>
+                      <p className="text-gray-900 dark:text-gray-100">
+                        {Math.round(ttsRequest.gen_audios[0].gen_audio_duration)}초
+                      </p>
+                    </div>
+                  )}
+                  {ttsRequest.gen_audios[0].gen_shared_title && (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                        공유 제목
+                      </label>
+                      <p className="text-gray-900 dark:text-gray-100">
+                        {ttsRequest.gen_audios[0].gen_shared_title}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
                     onClick={() => {

@@ -117,6 +117,7 @@ const FileUploadDemo = () => {
     ref_id: string;
     ref_file_url: string;
     ref_file_path: string;
+    ref_text?: string;
   } | null>(null)
   
   // 2. 공유 음성 상태 추가
@@ -135,6 +136,7 @@ const FileUploadDemo = () => {
     ref_id: string;
     ref_file_url: string;
     ref_file_path: string;
+    ref_text?: string;
   } | null>(null)
   
   const supabase = createClient()
@@ -498,12 +500,12 @@ const FileUploadDemo = () => {
   }, [recordedAudioBlob, userId, supabase])
 
   // 중복 요청 확인 함수 - 모든 진행 중인 상태 확인
-  const checkDuplicateRequest = async (userId: string, input_text: string, reference_id: string) => {
+  const checkDuplicateRequest = async (userId: string, gen_text_at_request: string, reference_id: string) => {
     const { data, error } = await supabase
       .from('tts_requests')
       .select('request_id, status')
       .eq('user_id', userId)
-      .eq('input_text', input_text)
+      .eq('gen_text_at_request', gen_text_at_request)
       .eq('reference_id', reference_id)
       .in('status', ['pending', 'processing'])
       .limit(5) // 최근 요청 몇 개 확인
@@ -517,7 +519,7 @@ const FileUploadDemo = () => {
     if (data && data.length > 0) {
       console.log('중복 요청 감지:', {
         userId,
-        input_text,
+        gen_text_at_request,
         reference_id,
         existingRequests: data
       })
@@ -553,13 +555,13 @@ const FileUploadDemo = () => {
   }
 
   // 텍스트와 오디오 조합으로 중복 요청 사전 확인
-  const checkDuplicateByTextAndAudio = async (userId: string, input_text: string) => {
+  const checkDuplicateByTextAndAudio = async (userId: string, gen_text_at_request: string) => {
     // 텍스트와 오디오 소스 조합으로 먼저 확인
     const { data, error } = await supabase
       .from('tts_requests')
       .select('request_id, status, created_at')
       .eq('user_id', userId)
-      .eq('input_text', input_text)
+      .eq('gen_text_at_request', gen_text_at_request)
       .in('status', ['pending', 'processing'])
       .gte('created_at', new Date(Date.now() - 60000).toISOString()) // 최근 1분 이내
       .limit(3)
@@ -578,7 +580,7 @@ const FileUploadDemo = () => {
     try {
       const { data, error } = await supabase
         .from('ref_audios')
-        .select('ref_id, ref_file_url, ref_file_path, created_at')
+        .select('ref_id, ref_file_url, ref_file_path, ref_text, created_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
       if (error) {
@@ -633,7 +635,7 @@ const FileUploadDemo = () => {
         // ref_audios에서 상세 정보 가져오기
         const { data: refData, error: refError } = await supabase
           .from('ref_audios')
-          .select('ref_id, ref_file_url, ref_file_path, created_at, user_id')
+          .select('ref_id, ref_file_url, ref_file_path, ref_text, created_at, user_id')
           .in('ref_id', refIds);
         
         if (refError) {
@@ -668,6 +670,7 @@ const FileUploadDemo = () => {
               ref_id: ref.ref_id,
               ref_file_url: ref.ref_file_url,
               ref_file_path: ref.ref_file_path,
+              ref_text: ref.ref_text,
               created_at: ref.created_at,
               shared_by_user: sharedByUser
             };
@@ -746,26 +749,33 @@ const FileUploadDemo = () => {
       let signedUrl: string | null = null
       let ref_id: string | null = null
 
-      // 1단계: 오디오 소스에 따라 처리
+      // 1단계: 오디오 소스에 따라 처리 및 ref_text_at_request 설정
+      let ref_text_at_request = ''; // 기본값은 공백
+      
       // 내 음성 분기
       if (selectedMyVoice) {
         filePath = selectedMyVoice.ref_file_path;
         signedUrl = selectedMyVoice.ref_file_url;
         ref_id = selectedMyVoice.ref_id;
+        ref_text_at_request = selectedMyVoice.ref_text || '';
       } else if (selectedSharedVoice) {
         // 공유 음성 분기
         filePath = selectedSharedVoice.ref_file_path;
         signedUrl = selectedSharedVoice.ref_file_url;
         ref_id = selectedSharedVoice.ref_id;
+        ref_text_at_request = selectedSharedVoice.ref_text || '';
       } else if (recordedAudioBlob) {
         // 녹음된 오디오 처리
         filePath = await uploadRecordedAudio()
+        ref_text_at_request = ''; // 녹음은 공백
       } else if (selectedPresetAudio) {
         // 미리 준비된 오디오 처리
         filePath = await uploadPresetAudio()
+        ref_text_at_request = ''; // 프리셋은 공백
       } else if (usedAudioFile) {
         // 이전에 사용한 오디오 처리
         filePath = await handleUsedAudioFile()
+        ref_text_at_request = ''; // 업로드 파일은 공백
       } else {
         // 파일 업로드가 필요한 경우 - 이는 onUploadSuccess에 의해 처리됨
         setErrorMessage('오디오 파일을 선택해주세요.')
