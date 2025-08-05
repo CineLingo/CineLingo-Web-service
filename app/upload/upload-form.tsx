@@ -6,7 +6,7 @@ import { useSupabaseUpload } from '@/hooks/use-supabase-upload'
 import { useQueueMonitor } from '@/hooks/use-queue-monitor'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Play, Pause, Mic, Square, RotateCcw, Music, Upload, User, Share2 } from 'lucide-react'
+import { Play, Pause, Mic, Square, RotateCcw, Music, User, Share2 } from 'lucide-react'
 import { QueueStatusDisplay } from '@/components/QueueStatusDisplay'
 
 // Supabase Storage list 반환 객체 타입 정의
@@ -491,7 +491,7 @@ const FileUploadDemo = () => {
 
 
   // ref_audios에 오디오 업로드 후 ref_id 받아오기
-  const uploadReferenceAudioAndGetRefId = async (filePath: string, signedUrl: string) => {
+  const uploadReferenceAudioAndGetRefId = useCallback(async (filePath: string, signedUrl: string) => {
     if (!userId) return null;
     
     // ref_audios에 insert
@@ -513,7 +513,7 @@ const FileUploadDemo = () => {
     }
     
     return data.ref_id;
-  }
+  }, [userId, supabase])
 
 
 
@@ -679,32 +679,26 @@ const FileUploadDemo = () => {
       let signedUrl: string | null = null
       let ref_id: string | null = null
 
-      // 1단계: 오디오 소스에 따라 처리 및 ref_text_at_request 설정
-      let ref_text_at_request = ''; // 기본값은 공백
+      // 1단계: 오디오 소스에 따라 처리
       
       // 내 음성 분기
       if (selectedMyVoice) {
         filePath = selectedMyVoice.ref_file_path;
         signedUrl = selectedMyVoice.ref_file_url;
         ref_id = selectedMyVoice.ref_id;
-        ref_text_at_request = selectedMyVoice.ref_text || '';
       } else if (selectedSharedVoice) {
         // 공유 음성 분기
         filePath = selectedSharedVoice.ref_file_path;
         signedUrl = selectedSharedVoice.ref_file_url;
         ref_id = selectedSharedVoice.ref_id;
-        ref_text_at_request = selectedSharedVoice.ref_text || '';
       } else if (recordedAudioBlob) {
         // 녹음된 오디오 처리
         filePath = await uploadRecordedAudio()
-        ref_text_at_request = ''; // 녹음은 공백
       } else if (selectedPresetAudio) {
         // 미리 준비된 오디오 처리
         filePath = await uploadPresetAudio()
-        ref_text_at_request = ''; // 프리셋은 공백
       } else if (selectedMyVoice) { // 이전에 사용한 오디오 처리
         filePath = await handleUsedAudioFile()
-        ref_text_at_request = ''; // 업로드 파일은 공백
       } else {
         // 파일 업로드가 필요한 경우 - 이는 onUploadSuccess에 의해 처리됨
         setErrorMessage('오디오 파일을 선택해주세요.')
@@ -833,7 +827,6 @@ const FileUploadDemo = () => {
     uploadPresetAudio,
     handleUsedAudioFile,
     supabase, 
-    router,
     uploadReferenceAudioAndGetRefId
   ])
 
@@ -855,6 +848,7 @@ const FileUploadDemo = () => {
 
 
   // 이전에 사용한 음성 목록 불러오기 함수
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const fetchUsedAudioFiles = useCallback(async () => {
     if (!userId) return;
     try {
@@ -868,6 +862,7 @@ const FileUploadDemo = () => {
         return;
       }
       if (data) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const files = data
           .filter((item: StorageObject) => item.name.endsWith('.wav') || item.name.endsWith('.webm'))
           .map((item: StorageObject) => ({
@@ -882,6 +877,7 @@ const FileUploadDemo = () => {
   }, [userId, supabase]);
 
   // 이전에 사용한 음성 선택 핸들러 (signed URL 적용)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleUsedAudioSelect = useCallback(async (audioFile: string) => {
     // signed URL 발급
     const filePath = audioFile.startsWith('/reference/')

@@ -11,10 +11,10 @@ import {
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface TermsData {
   email: string;
   password: string;
@@ -30,6 +30,7 @@ export function TermsAgreementForm({
   const [agreedToCopyright, setAgreedToCopyright] = useState(false);
   const [agreedToAI, setAgreedToAI] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();

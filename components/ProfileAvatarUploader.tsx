@@ -170,6 +170,7 @@ const ProfileAvatarUploader: React.FC<ProfileAvatarUploaderProps> = ({
         aria-label="아바타 업로드"
       >
         {avatarUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={avatarUrl}
             alt="아바타"
