@@ -1296,7 +1296,7 @@ const FileUploadDemo = () => {
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
                   {recordedAudioBlob ? '녹음 완료 · 미리듣기' : 
-                   selectedPresetAudio ? '미리 준비된 음성 · 미리듣기' : 
+                   selectedPresetAudio ? '미리듣기' : 
                    selectedMyVoice ? '내 음성 · 미리듣기' :
                    selectedSharedVoice ? '공유 음성 · 미리듣기' :
                    '업로드 완료 · 미리듣기'}
@@ -1308,8 +1308,9 @@ const FileUploadDemo = () => {
                     setSelectedMyVoice(null)
                     setSelectedSharedVoice(null)
                   }}
-                  className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                  className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors flex items-center space-x-1"
                 >
+                  <span>뒤로가기</span>
                   <RotateCcw size={14} />
                 </button>
               </div>
@@ -1371,7 +1372,16 @@ const FileUploadDemo = () => {
           {currentStep === 'text' && (
             <div className="space-y-4 sm:space-y-6">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-200">변환할 텍스트</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-200">생성하고 싶은 텍스트</label>
+                  <button
+                    onClick={() => setCurrentStep('preview')}
+                    className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors flex items-center space-x-1"
+                  >
+                    <span>뒤로가기</span>
+                    <RotateCcw size={14} />
+                  </button>
+                </div>
                 
                 {/* 텍스트 예시 선택 버튼 */}
                 <button
