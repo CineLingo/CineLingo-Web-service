@@ -6,7 +6,7 @@ import { useSupabaseUpload } from '@/hooks/use-supabase-upload'
 import { useQueueMonitor } from '@/hooks/use-queue-monitor'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Play, Pause, Mic, Square, RotateCcw, Music, User, Share2 } from 'lucide-react'
+import { Play, Pause, Mic, Square, RotateCcw, Music, User, Share2, ArrowLeft } from 'lucide-react'
 import { QueueStatusDisplay } from '@/components/QueueStatusDisplay'
 
 // Supabase Storage list 반환 객체 타입 정의
@@ -1301,18 +1301,18 @@ const FileUploadDemo = () => {
                    selectedSharedVoice ? '공유 음성 · 미리듣기' :
                    '업로드 완료 · 미리듣기'}
                 </span>
-                <button
-                  onClick={() => {
-                    restartRecordingWithFileReset()
-                    setSelectedPresetAudio(null)
-                    setSelectedMyVoice(null)
-                    setSelectedSharedVoice(null)
-                  }}
-                  className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors flex items-center space-x-1"
-                >
-                  <span>뒤로가기</span>
-                  <RotateCcw size={14} />
-                </button>
+                                  <button
+                    onClick={() => {
+                      restartRecordingWithFileReset()
+                      setSelectedPresetAudio(null)
+                      setSelectedMyVoice(null)
+                      setSelectedSharedVoice(null)
+                    }}
+                    className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors flex items-center space-x-1"
+                  >
+                    <span>뒤로가기</span>
+                    <ArrowLeft size={14} />
+                  </button>
               </div>
 
               {/* 미니멀 오디오 플레이어 */}
@@ -1379,7 +1379,7 @@ const FileUploadDemo = () => {
                     className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors flex items-center space-x-1"
                   >
                     <span>뒤로가기</span>
-                    <RotateCcw size={14} />
+                    <ArrowLeft size={14} />
                   </button>
                 </div>
                 
