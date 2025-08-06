@@ -9,8 +9,8 @@ export async function GET(request: Request) {
   const copyrightAgreed = searchParams.get("copyright_agreed") === "true";
   const aiAgreed = searchParams.get("ai_agreed") === "true";
   
-  // 로그인 후 업로드 페이지로 이동
-  const next = searchParams.get("next") ?? "/upload";
+  // 로그인 후 메인 페이지로 이동
+  const next = searchParams.get("next") ?? "/";
 
   if (code) {
     const supabase = await createClient();
