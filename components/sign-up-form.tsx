@@ -116,19 +116,13 @@ export function SignUpForm({
       return;
     }
     
-    // 구글 인증 처리 (약관 동의 정보를 메타데이터에 포함)
+    // 구글 인증 처리 (약관 동의 정보는 콜백에서 처리)
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
-        queryParams: {
-          // 약관 동의 정보를 쿼리 파라미터로 전달
-          terms_agreed: agreedToTerms.toString(),
-          voice_agreed: agreedToVoice.toString(),
-          copyright_agreed: agreedToCopyright.toString(),
-          ai_agreed: agreedToAI.toString()
-        }
+        // 약관 동의 정보는 전달하지 않음 - 콜백에서 약관 동의 페이지로 리다이렉트
       },
     });
     

@@ -16,6 +16,7 @@ export function GoogleAuthButton() {
       provider: 'google',
       options: {
         redirectTo: `${baseUrl}/auth/callback`,
+        // 약관 동의 정보는 전달하지 않음 - 콜백에서 약관 동의 페이지로 리다이렉트
       },
     });
   };

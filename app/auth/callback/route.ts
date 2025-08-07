@@ -12,14 +12,48 @@ export async function GET(request: Request) {
   // 로그인 후 메인 페이지로 이동
   const next = searchParams.get("next") ?? "/";
 
+  console.log('=== Google OAuth Callback ===');
+  console.log('Terms agreed:', termsAgreed);
+  console.log('Voice agreed:', voiceAgreed);
+  console.log('Copyright agreed:', copyrightAgreed);
+  console.log('AI agreed:', aiAgreed);
+
   if (code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-            // 구글 회원가입 시 약관 동의 정보를 사용자 메타데이터에 저장
-      if (termsAgreed && voiceAgreed && copyrightAgreed) {
-        const { data: userData } = await supabase.auth.getUser();
-        if (userData?.user) {
+      // 사용자 정보 가져오기
+      const { data: userData } = await supabase.auth.getUser();
+      
+      if (userData?.user) {
+        console.log('User metadata from session:', userData.user.user_metadata);
+        
+        // 사용자 메타데이터에서 약관 동의 상태 확인
+        const userTermsAgreed = userData.user.user_metadata?.terms_agreed === true || 
+                               userData.user.user_metadata?.terms_agreed === 'true' || 
+                               userData.user.user_metadata?.terms_agreed === '1';
+        const userVoiceAgreed = userData.user.user_metadata?.voice_agreed === true || 
+                               userData.user.user_metadata?.voice_agreed === 'true' || 
+                               userData.user.user_metadata?.voice_agreed === '1';
+        const userCopyrightAgreed = userData.user.user_metadata?.copyright_agreed === true || 
+                                   userData.user.user_metadata?.copyright_agreed === 'true' || 
+                                   userData.user.user_metadata?.copyright_agreed === '1';
+        
+        console.log('User metadata check:', {
+          terms_agreed: userTermsAgreed,
+          voice_agreed: userVoiceAgreed,
+          copyright_agreed: userCopyrightAgreed
+        });
+        
+        // 이미 약관 동의를 완료한 사용자인 경우
+        if (userTermsAgreed && userVoiceAgreed && userCopyrightAgreed) {
+          console.log('User already agreed to terms - redirecting to main page');
+          return NextResponse.redirect(`${origin}${next}`);
+        }
+        
+        // 새로운 약관 동의 정보가 있는 경우
+        if (termsAgreed && voiceAgreed && copyrightAgreed) {
+          console.log('New terms agreed - updating user metadata');
           // 사용자 메타데이터에 약관 동의 정보 저장
           const { error: updateError } = await supabase.auth.updateUser({
             data: {
@@ -32,14 +66,25 @@ export async function GET(request: Request) {
           
           if (updateError) {
             console.error('구글 회원가입 - 메타데이터 업데이트 실패:', updateError);
+          } else {
+            console.log('User metadata updated successfully');
           }
+          
+          // 약관 동의 완료 시 메인 페이지로 이동
+          console.log('Redirecting to main page:', `${origin}${next}`);
+          return NextResponse.redirect(`${origin}${next}`);
+        } else {
+          // 약관 동의 정보가 없거나 불완전한 경우 약관 동의 페이지로 리다이렉트
+          console.log('Terms not agreed - redirecting to terms page');
+          return NextResponse.redirect(`${origin}/auth/terms`);
         }
       }
-      
-      return NextResponse.redirect(`${origin}${next}`);
+    } else {
+      console.error('Session exchange error:', error);
     }
   }
 
   // return the user to an error page with instructions
+  console.log('Redirecting to error page');
   return NextResponse.redirect(`${origin}/auth/auth-code-error`);
 }

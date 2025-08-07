@@ -12,7 +12,8 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface TermsData {
@@ -30,8 +31,8 @@ export function TermsAgreementForm({
   const [agreedToCopyright, setAgreedToCopyright] = useState(false);
   const [agreedToAI, setAgreedToAI] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isLoading, setIsLoading] = useState(false);
+  const [isExistingUser, setIsExistingUser] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -41,48 +42,101 @@ export function TermsAgreementForm({
   const repeatPassword = searchParams.get("repeatPassword") || "";
   const signupType = searchParams.get("signupType") || "email";
 
+  // 사용자 인증 상태 확인
+  useEffect(() => {
+    const checkUserAuth = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      setIsExistingUser(!!user);
+    };
+    checkUserAuth();
+  }, []);
+
   const handleContinue = async () => {
     setError(null);
+    setIsLoading(true);
 
     if (!agreedToTerms) {
       setError("이용약관 및 개인정보 수집·이용에 동의해주세요.");
+      setIsLoading(false);
       return;
     }
 
     if (!agreedToVoice) {
       setError("음성(민감정보)의 수집·활용에 동의해주세요.");
+      setIsLoading(false);
       return;
     }
 
     if (!agreedToCopyright) {
       setError("창작 또는 공유 가능한 목소리만 업로드한다는 약관에 동의해주세요.");
+      setIsLoading(false);
       return;
     }
 
-    // 회원가입 페이지로 데이터와 함께 이동
-    const params = new URLSearchParams({
-      email,
-      password,
-      repeatPassword,
-      agreedToTerms: "true",
-      agreedToVoice: "true",
-      agreedToCopyright: "true",
-      agreedToAI: agreedToAI.toString(),
-      signupType,
-    });
+    try {
+      if (isExistingUser) {
+        // 기존 사용자: API를 통해 약관 동의 완료
+        const response = await fetch('/api/terms/complete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            terms_agreed: agreedToTerms,
+            voice_agreed: agreedToVoice,
+            copyright_agreed: agreedToCopyright,
+            ai_agreed: agreedToAI
+          }),
+        });
 
-    router.push(`/auth/sign-up?${params.toString()}`);
+        const result = await response.json();
+
+        if (result.success) {
+          // 약관 동의 완료 후 메인 페이지로 이동
+          router.push('/');
+        } else {
+          setError(result.error || "약관 동의 처리에 실패했습니다.");
+        }
+      } else {
+        // 신규 사용자: 회원가입 페이지로 데이터와 함께 이동
+        const params = new URLSearchParams({
+          email,
+          password,
+          repeatPassword,
+          agreedToTerms: "true",
+          agreedToVoice: "true",
+          agreedToCopyright: "true",
+          agreedToAI: agreedToAI.toString(),
+          signupType,
+        });
+
+        router.push(`/auth/sign-up?${params.toString()}`);
+      }
+    } catch (error) {
+      console.error('약관 동의 처리 오류:', error);
+      setError("약관 동의 처리 중 오류가 발생했습니다.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleBack = () => {
-    // 회원가입 페이지로 돌아가기
-    const params = new URLSearchParams({
-      email,
-      password,
-      repeatPassword,
-      signupType,
-    });
-    router.push(`/auth/sign-up?${params.toString()}`);
+    if (isExistingUser) {
+      // 기존 사용자: 로그아웃 처리
+      const supabase = createClient();
+      supabase.auth.signOut();
+      router.push('/auth/login');
+    } else {
+      // 신규 사용자: 회원가입 페이지로 돌아가기
+      const params = new URLSearchParams({
+        email,
+        password,
+        repeatPassword,
+        signupType,
+      });
+      router.push(`/auth/sign-up?${params.toString()}`);
+    }
   };
 
   return (
@@ -90,10 +144,18 @@ export function TermsAgreementForm({
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
-            {signupType === "google" ? "구글 회원가입 - 약관 동의" : "이메일 회원가입 - 약관 동의"}
+            {isExistingUser 
+              ? "약관 동의" 
+              : signupType === "google" 
+                ? "구글 회원가입 - 약관 동의" 
+                : "이메일 회원가입 - 약관 동의"
+            }
           </CardTitle>
           <CardDescription>
-            CineLingo 서비스 이용을 위한 약관에 동의해주세요
+            {isExistingUser 
+              ? "서비스 이용을 위해 약관에 동의해주세요"
+              : "CineLingo 서비스 이용을 위한 약관에 동의해주세요"
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -242,7 +304,7 @@ export function TermsAgreementForm({
                 onClick={handleBack}
                 className="flex-1"
               >
-                이전
+                {isExistingUser ? "취소" : "이전"}
               </Button>
               <Button
                 type="button"
@@ -250,7 +312,7 @@ export function TermsAgreementForm({
                 className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
                 disabled={isLoading}
               >
-                {isLoading ? "처리 중..." : "다음"}
+                {isLoading ? "처리 중..." : (isExistingUser ? "동의 완료" : "다음")}
               </Button>
             </div>
 
