@@ -12,7 +12,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -32,25 +32,12 @@ export function TermsAgreementForm({
   const [agreedToAI, setAgreedToAI] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isExistingUser, setIsExistingUser] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // URL 파라미터에서 회원가입 데이터 가져오기
-  const email = searchParams.get("email") || "";
-  const password = searchParams.get("password") || "";
-  const repeatPassword = searchParams.get("repeatPassword") || "";
-  const signupType = searchParams.get("signupType") || "email";
 
-  // 사용자 인증 상태 확인
-  useEffect(() => {
-    const checkUserAuth = async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      setIsExistingUser(!!user);
-    };
-    checkUserAuth();
-  }, []);
+
+
 
   const handleContinue = async () => {
     setError(null);
@@ -75,8 +62,28 @@ export function TermsAgreementForm({
     }
 
     try {
-      if (isExistingUser) {
-        // 기존 사용자: API를 통해 약관 동의 완료
+      // URL 파라미터에서 회원가입 데이터 가져오기
+      const email = searchParams.get("email") || "";
+      const password = searchParams.get("password") || "";
+      const repeatPassword = searchParams.get("repeatPassword") || "";
+      const signupType = searchParams.get("signupType");
+
+      // 이메일 회원가입의 경우 회원가입 페이지로 이동
+      if (signupType === "email") {
+        const params = new URLSearchParams({
+          email,
+          password,
+          repeatPassword,
+          agreedToTerms: "true",
+          agreedToVoice: "true",
+          agreedToCopyright: "true",
+          agreedToAI: agreedToAI.toString(),
+          signupType,
+        });
+
+        router.push(`/auth/sign-up?${params.toString()}`);
+      } else {
+        // 구글 OAuth의 경우 API를 통해 약관 동의 완료
         const response = await fetch('/api/terms/complete', {
           method: 'POST',
           headers: {
@@ -98,20 +105,6 @@ export function TermsAgreementForm({
         } else {
           setError(result.error || "약관 동의 처리에 실패했습니다.");
         }
-      } else {
-        // 신규 사용자: 회원가입 페이지로 데이터와 함께 이동
-        const params = new URLSearchParams({
-          email,
-          password,
-          repeatPassword,
-          agreedToTerms: "true",
-          agreedToVoice: "true",
-          agreedToCopyright: "true",
-          agreedToAI: agreedToAI.toString(),
-          signupType,
-        });
-
-        router.push(`/auth/sign-up?${params.toString()}`);
       }
     } catch (error) {
       console.error('약관 동의 처리 오류:', error);
@@ -122,13 +115,14 @@ export function TermsAgreementForm({
   };
 
   const handleBack = () => {
-    if (isExistingUser) {
-      // 기존 사용자: 로그아웃 처리
-      const supabase = createClient();
-      supabase.auth.signOut();
-      router.push('/auth/login');
-    } else {
-      // 신규 사용자: 회원가입 페이지로 돌아가기
+    // URL 파라미터에서 회원가입 데이터 가져오기
+    const email = searchParams.get("email") || "";
+    const password = searchParams.get("password") || "";
+    const repeatPassword = searchParams.get("repeatPassword") || "";
+    const signupType = searchParams.get("signupType");
+
+    // 이메일 회원가입의 경우 회원가입 페이지로 돌아가기
+    if (signupType === "email") {
       const params = new URLSearchParams({
         email,
         password,
@@ -136,6 +130,11 @@ export function TermsAgreementForm({
         signupType,
       });
       router.push(`/auth/sign-up?${params.toString()}`);
+    } else {
+      // 구글 OAuth의 경우 로그아웃 처리
+      const supabase = createClient();
+      supabase.auth.signOut();
+      router.push('/auth/login');
     }
   };
 
@@ -144,47 +143,20 @@ export function TermsAgreementForm({
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
-            {isExistingUser 
-              ? "약관 동의" 
-              : "이메일 회원가입 - 약관 동의"
+            {searchParams.get("signupType") === "email" 
+              ? "이메일 회원가입 - 약관 동의" 
+              : "약관 동의"
             }
           </CardTitle>
           <CardDescription>
-            {isExistingUser 
-              ? "서비스 이용을 위해 약관에 동의해주세요"
-              : "CineLingo 서비스 이용을 위한 약관에 동의해주세요"
+            {searchParams.get("signupType") === "email"
+              ? "CineLingo 서비스 이용을 위한 약관에 동의해주세요"
+              : "서비스 이용을 위해 약관에 동의해주세요"
             }
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-6">
-            {/* 모두 동의하기/취소하기 버튼 */}
-            <div className="border-b border-gray-200 dark:border-gray-700 pb-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  const allAgreed = agreedToTerms && agreedToVoice && agreedToCopyright && agreedToAI;
-                  if (allAgreed) {
-                    // 모두 동의된 상태면 모두 취소
-                    setAgreedToTerms(false);
-                    setAgreedToVoice(false);
-                    setAgreedToCopyright(false);
-                    setAgreedToAI(false);
-                  } else {
-                    // 하나라도 동의되지 않은 상태면 모두 동의
-                    setAgreedToTerms(true);
-                    setAgreedToVoice(true);
-                    setAgreedToCopyright(true);
-                    setAgreedToAI(true);
-                  }
-                }}
-                className="w-full border-blue-200 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 text-blue-700 dark:text-blue-300 dark:border-blue-700 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 transition-all duration-300"
-              >
-                {agreedToTerms && agreedToVoice && agreedToCopyright && agreedToAI ? "모두 취소하기" : "모두 동의하기"}
-              </Button>
-            </div>
-
             {/* 1. 이용약관 및 개인정보 수집·이용 */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -293,6 +265,33 @@ export function TermsAgreementForm({
               </div>
             </div>
 
+            {/* 모두 동의하기/취소하기 버튼 */}
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  const allAgreed = agreedToTerms && agreedToVoice && agreedToCopyright && agreedToAI;
+                  if (allAgreed) {
+                    // 모두 동의된 상태면 모두 취소
+                    setAgreedToTerms(false);
+                    setAgreedToVoice(false);
+                    setAgreedToCopyright(false);
+                    setAgreedToAI(false);
+                  } else {
+                    // 하나라도 동의되지 않은 상태면 모두 동의
+                    setAgreedToTerms(true);
+                    setAgreedToVoice(true);
+                    setAgreedToCopyright(true);
+                    setAgreedToAI(true);
+                  }
+                }}
+                className="w-full border-blue-200 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 text-blue-700 dark:text-blue-300 dark:border-blue-700 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 transition-all duration-300"
+              >
+                {agreedToTerms && agreedToVoice && agreedToCopyright && agreedToAI ? "모두 취소하기" : "모두 동의하기"}
+              </Button>
+            </div>
+
             {error && <p className="text-sm text-red-500">{error}</p>}
 
             <div className="flex gap-3">
@@ -302,7 +301,7 @@ export function TermsAgreementForm({
                 onClick={handleBack}
                 className="flex-1"
               >
-                {isExistingUser ? "취소" : "이전"}
+                {searchParams.get("signupType") === "email" ? "이전" : "취소"}
               </Button>
               <Button
                 type="button"
@@ -310,7 +309,7 @@ export function TermsAgreementForm({
                 className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
                 disabled={isLoading}
               >
-                {isLoading ? "처리 중..." : (isExistingUser ? "동의 완료" : "다음")}
+                {isLoading ? "처리 중..." : (searchParams.get("signupType") === "email" ? "다음" : "동의 완료")}
               </Button>
             </div>
 

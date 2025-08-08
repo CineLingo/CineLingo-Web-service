@@ -53,24 +53,12 @@ export function SignUpForm({
     setIsLoading(true);
     setError(null);
 
-    console.log('=== 회원가입 시작 ===');
-    console.log('약관 동의 상태:', {
-      agreedToTerms,
-      agreedToVoice,
-      agreedToCopyright,
-      agreedToAI,
-      signupType
-    });
-
     // 약관 동의 확인
     if (!agreedToTerms || !agreedToVoice || !agreedToCopyright) {
-      console.log('약관 동의 실패 - 필수 약관 미동의');
       setError("필수 약관에 동의해주세요.");
       setIsLoading(false);
       return;
     }
-
-    console.log('약관 동의 확인 완료');
 
     if (password !== repeatPassword) {
       setError("비밀번호가 일치하지 않습니다");
@@ -82,9 +70,9 @@ export function SignUpForm({
       // 환경 변수에서 기본 URL을 가져오거나, 개발 환경에서는 localhost 사용
       const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
         (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
-      const redirectUrl = `${baseUrl}/upload`;
+      const redirectUrl = `${baseUrl}/auth/email-confirmed`;
         
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -98,9 +86,11 @@ export function SignUpForm({
           }
         },
       });
-      if (error) throw error;
+      
+      if (error) {
+        throw error;
+      }
 
-      // Database Functions에서 자동으로 모든 테이블에 삽입됨 (users, accounts, user_to_account_mapping, terms_agreement)
       router.push("/auth/sign-up-success");
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "오류가 발생했습니다");
