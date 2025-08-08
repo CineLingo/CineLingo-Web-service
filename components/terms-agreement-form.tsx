@@ -146,9 +146,7 @@ export function TermsAgreementForm({
           <CardTitle className="text-2xl">
             {isExistingUser 
               ? "약관 동의" 
-              : signupType === "google" 
-                ? "구글 회원가입 - 약관 동의" 
-                : "이메일 회원가입 - 약관 동의"
+              : "이메일 회원가입 - 약관 동의"
             }
           </CardTitle>
           <CardDescription>

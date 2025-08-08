@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
-import { FcGoogle } from 'react-icons/fc';
+import { GoogleAuthButton } from "@/components/google-auth-button";
 
 export function SignUpForm({
   className,
@@ -109,27 +109,7 @@ export function SignUpForm({
     }
   };
 
-  const handleGoogleSignUp = async () => {
-    // 구글 회원가입 로직은 약관 동의 후 처리
-    if (!agreedToTerms || !agreedToVoice || !agreedToCopyright) {
-      setError("필수 약관에 동의해주세요.");
-      return;
-    }
-    
-    // 구글 인증 처리 (약관 동의 정보는 콜백에서 처리)
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-        // 약관 동의 정보는 전달하지 않음 - 콜백에서 약관 동의 페이지로 리다이렉트
-      },
-    });
-    
-    if (error) {
-      setError(error.message);
-    }
-  };
+
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
@@ -138,9 +118,7 @@ export function SignUpForm({
           <CardTitle className="text-2xl">
             {!agreedToTerms || !agreedToVoice || !agreedToCopyright
               ? "회원가입" 
-              : signupType === "google" 
-                ? "구글 회원가입" 
-                : "이메일 회원가입"
+              : "이메일 회원가입"
             }
           </CardTitle>
           <CardDescription>
@@ -157,7 +135,7 @@ export function SignUpForm({
               <div className="text-center">
                 <h3 className="text-lg font-medium mb-2">회원가입 방법을 선택해주세요</h3>
                 <p className="text-sm text-muted-foreground mb-6">
-                  계정을 만든 후 약관에 동의하시면 됩니다
+                  구글 회원가입은 바로 진행되며, 이메일 회원가입은 약관 동의 후 진행됩니다
                 </p>
               </div>
               
@@ -178,65 +156,48 @@ export function SignUpForm({
                 이메일로 회원가입
               </Button>
               
-              {/* 구글 회원가입 버튼 */}
-              <Button 
-                type="button" 
-                onClick={() => {
-                  const params = new URLSearchParams({
-                    signupType: "google",
-                  });
-                  router.push(`/auth/terms?${params.toString()}`);
-                }}
-                variant="outline"
-                className="w-full border-blue-200 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 text-blue-700 dark:text-blue-300 dark:border-blue-700 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 transition-all duration-300"
-              >
-                <FcGoogle className="mr-2 h-4 w-4" />
-                구글로 계속하기
-              </Button>
+              {/* 구글 회원가입 버튼 - 로그인과 동일한 GoogleAuthButton 사용 */}
+              <GoogleAuthButton />
             </div>
           ) : (
             // 약관 동의 후: 실제 회원가입 폼
             <form onSubmit={handleEmailSignUp}>
               <div className="flex flex-col gap-6">
-                {signupType === "email" && (
-                  <>
-                    <div className="grid gap-2">
-                      <Label htmlFor="email">이메일</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="m@example.com"
-                        required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <div className="flex items-center">
-                        <Label htmlFor="password">비밀번호</Label>
-                      </div>
-                      <Input
-                        id="password"
-                        type="password"
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                      />
-                    </div>
-                    <div className="grid gap-2">
-                      <div className="flex items-center">
-                        <Label htmlFor="repeat-password">비밀번호 확인</Label>
-                      </div>
-                      <Input
-                        id="repeat-password"
-                        type="password"
-                        required
-                        value={repeatPassword}
-                        onChange={(e) => setRepeatPassword(e.target.value)}
-                      />
-                    </div>
-                  </>
-                )}
+                <div className="grid gap-2">
+                  <Label htmlFor="email">이메일</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="m@example.com"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <div className="flex items-center">
+                    <Label htmlFor="password">비밀번호</Label>
+                  </div>
+                  <Input
+                    id="password"
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <div className="flex items-center">
+                    <Label htmlFor="repeat-password">비밀번호 확인</Label>
+                  </div>
+                  <Input
+                    id="repeat-password"
+                    type="password"
+                    required
+                    value={repeatPassword}
+                    onChange={(e) => setRepeatPassword(e.target.value)}
+                  />
+                </div>
                 
                 {error && <p className="text-sm text-red-500">{error}</p>}
                 
@@ -245,21 +206,9 @@ export function SignUpForm({
                   ✓ 약관에 동의하셨습니다
                 </div>
                 
-                {signupType === "email" ? (
-                  <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300" disabled={isLoading}>
-                    {isLoading ? "계정 생성 중..." : "이메일로 회원가입"}
-                  </Button>
-                ) : (
-                  <Button 
-                    type="button" 
-                    onClick={handleGoogleSignUp}
-                    variant="outline"
-                    className="w-full border-blue-200 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 text-blue-700 dark:text-blue-300 dark:border-blue-700 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 transition-all duration-300"
-                  >
-                    <FcGoogle className="mr-2 h-4 w-4" />
-                    구글로 계속하기
-                  </Button>
-                )}
+                <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300" disabled={isLoading}>
+                  {isLoading ? "계정 생성 중..." : "이메일로 회원가입"}
+                </Button>
               </div>
             </form>
           )}
