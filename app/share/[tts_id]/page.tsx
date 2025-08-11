@@ -187,7 +187,7 @@ export default function SharePage() {
       // 네이티브 공유 API 사용 (모바일)
       try {
         await navigator.share({
-          title: 'Nine Seconds TTS',
+          title: 'Lingo Voice TTS',
           text: shareText,
           url: shareUrl,
         })
@@ -329,7 +329,7 @@ export default function SharePage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <Volume2 size={16} className="text-gray-500" />
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Nine Seconds TTS</span>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Lingo Voice TTS</span>
                       </div>
                       <div className="text-xs text-gray-500">
                         {formatTime(currentTime)} / {formatTime(duration)}

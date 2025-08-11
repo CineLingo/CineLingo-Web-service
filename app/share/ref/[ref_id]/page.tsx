@@ -148,7 +148,7 @@ export default function ShareRefPage() {
       // 네이티브 공유 API 사용 (모바일)
       try {
         await navigator.share({
-          title: 'Nine Seconds 참조 음성',
+          title: 'Lingo Voice 참조 음성',
           text: shareText,
           url: shareUrl,
         })

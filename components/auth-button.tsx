@@ -20,10 +20,18 @@ export async function AuthButton() {
     </div>
   ) : (
     <div className="flex gap-2">
-      <Button asChild size="sm">
+      <Button 
+        asChild 
+        size="sm"
+        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-white font-medium"
+      >
         <Link href="/auth/login">Sign in</Link>
       </Button>
-      <Button asChild size="sm">
+      <Button 
+        asChild 
+        size="sm"
+        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-white font-medium"
+      >
         <Link href="/auth/sign-up">Sign up</Link>
       </Button>
     </div>

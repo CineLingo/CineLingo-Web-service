@@ -9,7 +9,7 @@ export function Hero() {
         {/* 브랜드 타이틀 */}
         <div className="space-y-6 sm:space-y-8">
           <h1 className="text-6xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent animate-gradient">
-            Nine Seconds
+            Lingo Voice
           </h1>
         </div>
 
@@ -23,7 +23,7 @@ export function Hero() {
         {/* 서브 설명 */}
         <div className="space-y-4 sm:space-y-6">
           <p className="text-base sm:text-lg text-gray-700 dark:text-gray-300 font-medium">
-           9초 내외의 목소리 샘플이면 충분합니다.
+           3초 내외의 목소리 샘플이면 충분합니다.
           </p>
           <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 leading-relaxed font-light">
 
