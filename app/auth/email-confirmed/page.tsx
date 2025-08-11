@@ -19,33 +19,24 @@ export default function EmailConfirmedPage() {
   useEffect(() => {
     const processEmailConfirmation = async () => {
       try {
-        console.log('=== 이메일 인증 완료 페이지 로드 ===');
-        
         const supabase = createClient();
         
         // URL 파라미터에서 토큰 정보 확인
         const tokenHash = searchParams.get('token_hash');
         const type = searchParams.get('type');
         
-        console.log('URL 파라미터:', { tokenHash, type });
-        
         // 토큰이 있는 경우 이메일 인증 처리
         if (tokenHash && type) {
-          console.log('이메일 인증 처리 시작');
-          
           const { error: verifyError } = await supabase.auth.verifyOtp({
             type: type as any,
             token_hash: tokenHash,
           });
           
           if (verifyError) {
-            console.error('이메일 인증 오류:', verifyError);
             setError(`이메일 인증에 실패했습니다: ${verifyError.message}`);
             setIsProcessing(false);
             return;
           }
-          
-          console.log('이메일 인증 완료');
           
           // 이메일 인증 완료 후 잠시 대기 (auth.users 테이블 업데이트 대기)
           await new Promise(resolve => setTimeout(resolve, 1000));
@@ -55,39 +46,28 @@ export default function EmailConfirmedPage() {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         
         if (userError || !user) {
-          console.error('사용자 정보 가져오기 오류:', userError);
           setError('사용자 정보를 가져올 수 없습니다.');
           setIsProcessing(false);
           return;
         }
         
-        console.log('사용자 정보 확인:', { id: user.id, email: user.email });
-        console.log('사용자 메타데이터:', user.user_metadata);
-        
         // 이메일 인증 상태 확인
         if (!user.email_confirmed_at) {
-          console.log('이메일 인증이 아직 완료되지 않음, 다시 확인 중...');
           // 잠시 더 대기 후 다시 확인
           await new Promise(resolve => setTimeout(resolve, 2000));
           
           const { data: { user: refreshedUser }, error: refreshError } = await supabase.auth.getUser();
           if (refreshError || !refreshedUser) {
-            console.error('사용자 정보 새로고침 오류:', refreshError);
             setError('사용자 정보를 새로고침할 수 없습니다.');
             setIsProcessing(false);
             return;
           }
           
           if (!refreshedUser.email_confirmed_at) {
-            console.error('이메일 인증이 완료되지 않음');
             setError('이메일 인증이 완료되지 않았습니다. 다시 시도해주세요.');
             setIsProcessing(false);
             return;
           }
-          
-          console.log('이메일 인증 완료 확인됨:', refreshedUser.email_confirmed_at);
-        } else {
-          console.log('이메일 인증 완료됨:', user.email_confirmed_at);
         }
         
         // 약관 동의 여부 확인
@@ -101,41 +81,118 @@ export default function EmailConfirmedPage() {
                                user.user_metadata?.copyright_agreed === 'true' || 
                                user.user_metadata?.copyright_agreed === '1';
         
-        console.log('약관 동의 상태:', { termsAgreed, voiceAgreed, copyrightAgreed });
-        console.log('전체 user_metadata:', user.user_metadata);
-        
-        // 이메일 인증이 완료되고 약관 동의가 완료되었는지 확인
+        // 이메일 인증이 완료되고 약관 동의가 완료된 경우 public 테이블 생성
         if (user.email_confirmed_at && termsAgreed && voiceAgreed && copyrightAgreed) {
-          console.log('✅ 이메일 인증 및 약관 동의 완료 - 회원가입 성공!');
-          console.log('📝 Public 테이블은 이미 confirm/route.ts에서 생성되었습니다.');
+          try {
+            // 1. users 테이블에 insert
+            const { error: usersError } = await supabase
+              .from('users')
+              .upsert({
+                user_id: user.id,
+                email: user.email,
+                display_name: '',
+                avatar_url: '',
+                auth_provider: true,
+                balance: 0
+              }, { onConflict: 'user_id' });
+            
+            if (usersError) {
+              throw new Error(`users 테이블 생성 실패: ${usersError.message}`);
+            }
+            
+            // 2. accounts 테이블에 insert
+            const { error: accountsError } = await supabase
+              .from('accounts')
+              .upsert({
+                email: user.email,
+                name: '',
+                usage: 0.0
+              }, { onConflict: 'email' });
+            
+            if (accountsError) {
+              throw new Error(`accounts 테이블 생성 실패: ${accountsError.message}`);
+            }
+            
+            // 3. account_id 가져오기
+            const { data: accountData, error: accountQueryError } = await supabase
+              .from('accounts')
+              .select('account_id')
+              .eq('email', user.email)
+              .single();
+            
+            if (accountQueryError || !accountData) {
+              throw new Error(`account_id 조회 실패: ${accountQueryError?.message || 'account_id를 찾을 수 없습니다'}`);
+            }
+            
+            const accountId = accountData.account_id;
+            
+            // 4. user_to_account_mapping 테이블에 insert
+            const { error: mappingError } = await supabase
+              .from('user_to_account_mapping')
+              .upsert({
+                user_id: user.id,
+                account_id: accountId
+              }, { onConflict: 'user_id,account_id' });
+            
+            if (mappingError) {
+              throw new Error(`user_to_account_mapping 테이블 생성 실패: ${mappingError.message}`);
+            }
+            
+            // 5. terms_agreement 테이블에 insert
+            const { error: termsError } = await supabase
+              .from('terms_agreement')
+              .upsert({
+                account_id: accountId,
+                terms_version: '1.0',
+                agreed: true,
+                critical_keys: {
+                  terms_agreed: termsAgreed,
+                  voice_agreed: voiceAgreed,
+                  copyright_agreed: copyrightAgreed,
+                  ai_agreed: user.user_metadata?.ai_agreed === true || 
+                            user.user_metadata?.ai_agreed === 'true' || 
+                            user.user_metadata?.ai_agreed === '1'
+                }
+              }, { onConflict: 'account_id' });
+            
+            if (termsError) {
+              throw new Error(`terms_agreement 테이블 생성 실패: ${termsError.message}`);
+            }
+            
+          } catch (error) {
+            setError(`회원가입 완료에 실패했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+            setIsProcessing(false);
+            return;
+          }
         } else if (!user.email_confirmed_at) {
-          console.log('⚠️ 이메일 인증이 완료되지 않음');
+          setError('이메일 인증이 완료되지 않았습니다.');
+          setIsProcessing(false);
+          return;
         } else {
-          console.log('⚠️ 약관 동의가 완료되지 않음');
+          setError('약관 동의가 완료되지 않았습니다.');
+          setIsProcessing(false);
+          return;
         }
         
-        console.log('모든 처리 완료');
         setIsProcessing(false);
         
         // 3초 카운트다운 후 자동 리다이렉트
-                       const timer = setInterval(() => {
-                 setCountdown((prev) => {
-                   if (prev <= 1) {
-                     setIsRedirecting(true);
-                     // setTimeout을 사용하여 렌더링 사이클 밖에서 라우터 이동
-                     setTimeout(() => {
-                       router.push("/");
-                     }, 0);
-                     return 0;
-                   }
-                   return prev - 1;
-                 });
-               }, 1000);
+        const timer = setInterval(() => {
+          setCountdown((prev) => {
+            if (prev <= 1) {
+              setIsRedirecting(true);
+              setTimeout(() => {
+                router.push("/");
+              }, 0);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
 
         return () => clearInterval(timer);
         
       } catch (error) {
-        console.error('이메일 인증 처리 중 오류:', error);
         setError('이메일 인증 처리 중 오류가 발생했습니다.');
         setIsProcessing(false);
       }
