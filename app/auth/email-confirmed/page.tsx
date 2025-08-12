@@ -159,6 +159,28 @@ export default function EmailConfirmedPage() {
               throw new Error(`terms_agreement 테이블 생성 실패: ${termsError.message}`);
             }
             
+            // 6. 사용자 메타데이터 업데이트 (미들웨어에서 약관 동의 상태 확인을 위해)
+            const { error: updateError } = await supabase.auth.updateUser({
+              data: {
+                terms_agreed: true,
+                voice_agreed: true,
+                copyright_agreed: true,
+                ai_agreed: user.user_metadata?.ai_agreed === true || 
+                          user.user_metadata?.ai_agreed === 'true' || 
+                          user.user_metadata?.ai_agreed === '1'
+              }
+            });
+            
+            if (updateError) {
+              throw new Error(`사용자 메타데이터 업데이트 실패: ${updateError.message}`);
+            }
+            
+            // 7. 세션 새로고침
+            const { error: refreshError } = await supabase.auth.refreshSession();
+            if (refreshError) {
+              console.warn('세션 새로고침 실패:', refreshError.message);
+            }
+            
           } catch (error) {
             setError(`회원가입 완료에 실패했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
             setIsProcessing(false);
@@ -182,7 +204,7 @@ export default function EmailConfirmedPage() {
             if (prev <= 1) {
               setIsRedirecting(true);
               setTimeout(() => {
-                router.push("/");
+                window.location.href = "/";
               }, 0);
               return 0;
             }
@@ -203,7 +225,7 @@ export default function EmailConfirmedPage() {
 
   const handleManualRedirect = () => {
     setIsRedirecting(true);
-    router.push("/");
+    window.location.href = "/";
   };
 
   if (isProcessing) {

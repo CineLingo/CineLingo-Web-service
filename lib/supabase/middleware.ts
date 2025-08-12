@@ -96,7 +96,8 @@ export async function updateSession(request: NextRequest) {
         !request.nextUrl.pathname.startsWith("/auth/forgot-password") &&
         !request.nextUrl.pathname.startsWith("/auth/update-password") &&
         !request.nextUrl.pathname.startsWith("/auth/confirm") &&
-        !request.nextUrl.pathname.startsWith("/auth/callback")) {
+        !request.nextUrl.pathname.startsWith("/auth/callback") &&
+        !request.nextUrl.pathname.startsWith("/auth/email-confirmed")) {
       
       const url = request.nextUrl.clone();
       url.pathname = "/auth/terms";
