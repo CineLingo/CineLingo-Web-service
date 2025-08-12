@@ -4,10 +4,6 @@ import { NextResponse } from "next/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const termsAgreed = searchParams.get("terms_agreed") === "true";
-  const voiceAgreed = searchParams.get("voice_agreed") === "true";
-  const copyrightAgreed = searchParams.get("copyright_agreed") === "true";
-  const aiAgreed = searchParams.get("ai_agreed") === "true";
   
   // 로그인 후 메인 페이지로 이동
   const next = searchParams.get("next") ?? "/";
@@ -36,28 +32,8 @@ export async function GET(request: Request) {
           return NextResponse.redirect(`${origin}${next}`);
         }
         
-        // 새로운 약관 동의 정보가 있는 경우
-        if (termsAgreed && voiceAgreed && copyrightAgreed) {
-          // 사용자 메타데이터에 약관 동의 정보 저장
-          const { error: updateError } = await supabase.auth.updateUser({
-            data: {
-              terms_agreed: termsAgreed,
-              voice_agreed: voiceAgreed,
-              copyright_agreed: copyrightAgreed,
-              ai_agreed: aiAgreed
-            }
-          });
-          
-          if (updateError) {
-            console.error('구글 회원가입 - 메타데이터 업데이트 실패:', updateError);
-          }
-          
-          // 약관 동의 완료 시 메인 페이지로 이동
-          return NextResponse.redirect(`${origin}${next}`);
-        } else {
-          // 약관 동의 정보가 없거나 불완전한 경우 약관 동의 페이지로 리다이렉트
-          return NextResponse.redirect(`${origin}/auth/terms`);
-        }
+        // 약관 동의를 완료하지 않은 경우 약관 동의 페이지로 리다이렉트
+        return NextResponse.redirect(`${origin}/auth/terms`);
       }
     } else {
       console.error('Session exchange error:', error);

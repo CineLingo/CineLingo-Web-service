@@ -29,23 +29,33 @@ export function SignUpForm({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // URL 파라미터에서 약관 동의 데이터 확인
-  const agreedToTerms = searchParams.get("agreedToTerms") === "true";
-  const agreedToVoice = searchParams.get("agreedToVoice") === "true";
-  const agreedToCopyright = searchParams.get("agreedToCopyright") === "true";
-  const agreedToAI = searchParams.get("agreedToAI") === "true";
-  const signupType = searchParams.get("signupType"); // "email" 또는 "google"
+  // 세션스토리지에서 약관 동의 데이터 확인
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [agreedToVoice, setAgreedToVoice] = useState(false);
+  const [agreedToCopyright, setAgreedToCopyright] = useState(false);
+  const [agreedToAI, setAgreedToAI] = useState(false);
+  const [signupType, setSignupType] = useState<string | null>(null);
 
-  // URL 파라미터에서 회원가입 데이터 가져오기
+  // 세션스토리지에서 회원가입 데이터 가져오기
   useEffect(() => {
-    const urlEmail = searchParams.get("email");
-    const urlPassword = searchParams.get("password");
-    const urlRepeatPassword = searchParams.get("repeatPassword");
+    const storedEmail = sessionStorage.getItem("tempSignupEmail");
+    const storedPassword = sessionStorage.getItem("tempSignupPassword");
+    const storedRepeatPassword = sessionStorage.getItem("tempSignupRepeatPassword");
+    const storedSignupType = sessionStorage.getItem("tempSignupType");
+    const storedAgreedToTerms = sessionStorage.getItem("tempAgreedToTerms");
+    const storedAgreedToVoice = sessionStorage.getItem("tempAgreedToVoice");
+    const storedAgreedToCopyright = sessionStorage.getItem("tempAgreedToCopyright");
+    const storedAgreedToAI = sessionStorage.getItem("tempAgreedToAI");
     
-    if (urlEmail) setEmail(urlEmail);
-    if (urlPassword) setPassword(urlPassword);
-    if (urlRepeatPassword) setRepeatPassword(urlRepeatPassword);
-  }, [searchParams]);
+    if (storedEmail) setEmail(storedEmail);
+    if (storedPassword) setPassword(storedPassword);
+    if (storedRepeatPassword) setRepeatPassword(storedRepeatPassword);
+    if (storedSignupType) setSignupType(storedSignupType);
+    if (storedAgreedToTerms === "true") setAgreedToTerms(true);
+    if (storedAgreedToVoice === "true") setAgreedToVoice(true);
+    if (storedAgreedToCopyright === "true") setAgreedToCopyright(true);
+    if (storedAgreedToAI === "true") setAgreedToAI(true);
+  }, []);
 
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,6 +101,16 @@ export function SignUpForm({
         throw error;
       }
 
+      // 회원가입 성공 시 세션스토리지 정리
+      sessionStorage.removeItem("tempSignupEmail");
+      sessionStorage.removeItem("tempSignupPassword");
+      sessionStorage.removeItem("tempSignupRepeatPassword");
+      sessionStorage.removeItem("tempSignupType");
+      sessionStorage.removeItem("tempAgreedToTerms");
+      sessionStorage.removeItem("tempAgreedToVoice");
+      sessionStorage.removeItem("tempAgreedToCopyright");
+      sessionStorage.removeItem("tempAgreedToAI");
+
       router.push("/auth/sign-up-success");
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "오류가 발생했습니다");
@@ -132,14 +152,15 @@ export function SignUpForm({
               {/* 이메일 회원가입 버튼 */}
               <Button 
                 type="button" 
-                onClick={() => {
-                  const params = new URLSearchParams({
-                    email,
-                    password,
-                    repeatPassword,
-                    signupType: "email",
-                  });
-                  router.push(`/auth/terms?${params.toString()}`);
+                onClick={async () => {
+                  // 세션스토리지에 데이터 저장
+                  sessionStorage.setItem("tempSignupEmail", email);
+                  sessionStorage.setItem("tempSignupPassword", password);
+                  sessionStorage.setItem("tempSignupRepeatPassword", repeatPassword);
+                  sessionStorage.setItem("tempSignupType", "email");
+                  
+                  // 약관 동의 페이지로 이동 (URL 파라미터 없이)
+                  router.push("/auth/terms");
                 }}
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
               >

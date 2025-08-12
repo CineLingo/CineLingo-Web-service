@@ -12,7 +12,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -32,8 +32,15 @@ export function TermsAgreementForm({
   const [agreedToAI, setAgreedToAI] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [signupType, setSignupType] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // 세션스토리지에서 회원가입 타입 확인
+  useEffect(() => {
+    const storedSignupType = sessionStorage.getItem("tempSignupType");
+    setSignupType(storedSignupType);
+  }, []);
 
 
 
@@ -62,26 +69,20 @@ export function TermsAgreementForm({
     }
 
     try {
-      // URL 파라미터에서 회원가입 데이터 가져오기
-      const email = searchParams.get("email") || "";
-      const password = searchParams.get("password") || "";
-      const repeatPassword = searchParams.get("repeatPassword") || "";
-      const signupType = searchParams.get("signupType");
+      // 세션스토리지에서 회원가입 데이터 가져오기
+      const email = sessionStorage.getItem("tempSignupEmail") || "";
+      const password = sessionStorage.getItem("tempSignupPassword") || "";
+      const repeatPassword = sessionStorage.getItem("tempSignupRepeatPassword") || "";
 
       // 이메일 회원가입의 경우 회원가입 페이지로 이동
       if (signupType === "email") {
-        const params = new URLSearchParams({
-          email,
-          password,
-          repeatPassword,
-          agreedToTerms: "true",
-          agreedToVoice: "true",
-          agreedToCopyright: "true",
-          agreedToAI: agreedToAI.toString(),
-          signupType,
-        });
+        // 세션스토리지에 약관 동의 정보 저장
+        sessionStorage.setItem("tempAgreedToTerms", "true");
+        sessionStorage.setItem("tempAgreedToVoice", "true");
+        sessionStorage.setItem("tempAgreedToCopyright", "true");
+        sessionStorage.setItem("tempAgreedToAI", agreedToAI.toString());
 
-        router.push(`/auth/sign-up?${params.toString()}`);
+        router.push("/auth/sign-up");
       } else {
         // 구글 OAuth의 경우 API를 통해 약관 동의 완료
         const response = await fetch('/api/terms/complete', {
@@ -100,6 +101,16 @@ export function TermsAgreementForm({
         const result = await response.json();
 
         if (result.success) {
+          // 세션스토리지 정리
+          sessionStorage.removeItem("tempSignupEmail");
+          sessionStorage.removeItem("tempSignupPassword");
+          sessionStorage.removeItem("tempSignupRepeatPassword");
+          sessionStorage.removeItem("tempSignupType");
+          sessionStorage.removeItem("tempAgreedToTerms");
+          sessionStorage.removeItem("tempAgreedToVoice");
+          sessionStorage.removeItem("tempAgreedToCopyright");
+          sessionStorage.removeItem("tempAgreedToAI");
+          
           // 약관 동의 완료 후 메인 페이지로 이동
           router.push('/');
         } else {
@@ -115,25 +126,22 @@ export function TermsAgreementForm({
   };
 
   const handleBack = () => {
-    // URL 파라미터에서 회원가입 데이터 가져오기
-    const email = searchParams.get("email") || "";
-    const password = searchParams.get("password") || "";
-    const repeatPassword = searchParams.get("repeatPassword") || "";
-    const signupType = searchParams.get("signupType");
-
     // 이메일 회원가입의 경우 회원가입 페이지로 돌아가기
     if (signupType === "email") {
-      const params = new URLSearchParams({
-        email,
-        password,
-        repeatPassword,
-        signupType,
-      });
-      router.push(`/auth/sign-up?${params.toString()}`);
+      router.push("/auth/sign-up");
     } else {
       // 구글 OAuth의 경우 로그아웃 처리
       const supabase = createClient();
       supabase.auth.signOut();
+      // 세션스토리지 정리
+      sessionStorage.removeItem("tempSignupEmail");
+      sessionStorage.removeItem("tempSignupPassword");
+      sessionStorage.removeItem("tempSignupRepeatPassword");
+      sessionStorage.removeItem("tempSignupType");
+      sessionStorage.removeItem("tempAgreedToTerms");
+      sessionStorage.removeItem("tempAgreedToVoice");
+      sessionStorage.removeItem("tempAgreedToCopyright");
+      sessionStorage.removeItem("tempAgreedToAI");
       router.push('/auth/login');
     }
   };
@@ -143,13 +151,13 @@ export function TermsAgreementForm({
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
-            {searchParams.get("signupType") === "email" 
+            {signupType === "email" 
               ? "이메일 회원가입 - 약관 동의" 
               : "약관 동의"
             }
           </CardTitle>
           <CardDescription>
-            {searchParams.get("signupType") === "email"
+            {signupType === "email"
               ? "CineLingo 서비스 이용을 위한 약관에 동의해주세요"
               : "서비스 이용을 위해 약관에 동의해주세요"
             }
@@ -301,7 +309,7 @@ export function TermsAgreementForm({
                 onClick={handleBack}
                 className="flex-1"
               >
-                {searchParams.get("signupType") === "email" ? "이전" : "취소"}
+                {signupType === "email" ? "이전" : "취소"}
               </Button>
               <Button
                 type="button"
@@ -309,7 +317,7 @@ export function TermsAgreementForm({
                 className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
                 disabled={isLoading}
               >
-                {isLoading ? "처리 중..." : (searchParams.get("signupType") === "email" ? "다음" : "동의 완료")}
+                {isLoading ? "처리 중..." : (signupType === "email" ? "다음" : "동의 완료")}
               </Button>
             </div>
 
