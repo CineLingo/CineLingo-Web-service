@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
-  const next = searchParams.get("next") ?? "/";
+  // const next = searchParams.get("next") ?? "/";
 
   if (token_hash && type) {
     const supabase = await createClient();
@@ -33,16 +33,16 @@ export async function GET(request: NextRequest) {
           console.error('이메일 인증 상태 업데이트 오류:', updateError);
         }
 
-        // 약관 동의 여부 확인
-        const termsAgreed = user.user_metadata?.terms_agreed === true || 
-                           user.user_metadata?.terms_agreed === 'true' || 
-                           user.user_metadata?.terms_agreed === '1';
-        const voiceAgreed = user.user_metadata?.voice_agreed === true || 
-                           user.user_metadata?.voice_agreed === 'true' || 
-                           user.user_metadata?.voice_agreed === '1';
-        const copyrightAgreed = user.user_metadata?.copyright_agreed === true || 
-                               user.user_metadata?.copyright_agreed === 'true' || 
-                               user.user_metadata?.copyright_agreed === '1';
+        // 약관 동의 여부 확인 (사용하지 않는 변수 주석 처리)
+        // const termsAgreed = user.user_metadata?.terms_agreed === true || 
+        //                    user.user_metadata?.terms_agreed === 'true' || 
+        //                    user.user_metadata?.terms_agreed === '1';
+        // const voiceAgreed = user.user_metadata?.voice_agreed === true || 
+        //                    user.user_metadata?.voice_agreed === 'true' || 
+        //                    user.user_metadata?.voice_agreed === '1';
+        // const copyrightAgreed = user.user_metadata?.copyright_agreed === true || 
+        //                        user.user_metadata?.copyright_agreed === 'true' || 
+        //                        user.user_metadata?.copyright_agreed === '1';
         
         // 이메일 인증 완료 페이지로 리다이렉트 (public 테이블 생성은 email-confirmed 페이지에서 처리)
         redirect('/auth/email-confirmed');

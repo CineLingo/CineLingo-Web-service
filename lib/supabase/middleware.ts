@@ -1,9 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasEnvVars } from "../utils";
+import { type User } from "@supabase/supabase-js";
 
 // Verified User 판별 함수
-function isVerifiedUser(user: any): boolean {
+function isVerifiedUser(user: User | null): boolean {
   if (!user) {
     return false;
   }

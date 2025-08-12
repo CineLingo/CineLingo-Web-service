@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -34,7 +34,7 @@ export function TermsAgreementForm({
   const [isLoading, setIsLoading] = useState(false);
   const [signupType, setSignupType] = useState<string | null>(null);
   const router = useRouter();
-  const searchParams = useSearchParams();
+  // const searchParams = useSearchParams();
 
   // 세션스토리지에서 회원가입 타입 확인
   useEffect(() => {
@@ -69,10 +69,10 @@ export function TermsAgreementForm({
     }
 
     try {
-      // 세션스토리지에서 회원가입 데이터 가져오기
-      const email = sessionStorage.getItem("tempSignupEmail") || "";
-      const password = sessionStorage.getItem("tempSignupPassword") || "";
-      const repeatPassword = sessionStorage.getItem("tempSignupRepeatPassword") || "";
+      // 세션스토리지에서 회원가입 데이터 가져오기 (사용하지 않는 변수 주석 처리)
+      // const email = sessionStorage.getItem("tempSignupEmail") || "";
+      // const password = sessionStorage.getItem("tempSignupPassword") || "";
+      // const repeatPassword = sessionStorage.getItem("tempSignupRepeatPassword") || "";
 
       // 이메일 회원가입의 경우 회원가입 페이지로 이동
       if (signupType === "email") {

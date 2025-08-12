@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { GoogleAuthButton } from "@/components/google-auth-button";
 
@@ -27,21 +27,21 @@ export function SignUpForm({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const searchParams = useSearchParams();
+  // const searchParams = useSearchParams();
 
   // 세션스토리지에서 약관 동의 데이터 확인
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [agreedToVoice, setAgreedToVoice] = useState(false);
   const [agreedToCopyright, setAgreedToCopyright] = useState(false);
   const [agreedToAI, setAgreedToAI] = useState(false);
-  const [signupType, setSignupType] = useState<string | null>(null);
+  // const [signupType, setSignupType] = useState<string | null>(null);
 
   // 세션스토리지에서 회원가입 데이터 가져오기
   useEffect(() => {
     const storedEmail = sessionStorage.getItem("tempSignupEmail");
     const storedPassword = sessionStorage.getItem("tempSignupPassword");
     const storedRepeatPassword = sessionStorage.getItem("tempSignupRepeatPassword");
-    const storedSignupType = sessionStorage.getItem("tempSignupType");
+    // const storedSignupType = sessionStorage.getItem("tempSignupType");
     const storedAgreedToTerms = sessionStorage.getItem("tempAgreedToTerms");
     const storedAgreedToVoice = sessionStorage.getItem("tempAgreedToVoice");
     const storedAgreedToCopyright = sessionStorage.getItem("tempAgreedToCopyright");
@@ -50,7 +50,7 @@ export function SignUpForm({
     if (storedEmail) setEmail(storedEmail);
     if (storedPassword) setPassword(storedPassword);
     if (storedRepeatPassword) setRepeatPassword(storedRepeatPassword);
-    if (storedSignupType) setSignupType(storedSignupType);
+    // if (storedSignupType) setSignupType(storedSignupType);
     if (storedAgreedToTerms === "true") setAgreedToTerms(true);
     if (storedAgreedToVoice === "true") setAgreedToVoice(true);
     if (storedAgreedToCopyright === "true") setAgreedToCopyright(true);
@@ -82,7 +82,7 @@ export function SignUpForm({
         (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
       const redirectUrl = `${baseUrl}/auth/email-confirmed`;
         
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -105,7 +105,7 @@ export function SignUpForm({
       sessionStorage.removeItem("tempSignupEmail");
       sessionStorage.removeItem("tempSignupPassword");
       sessionStorage.removeItem("tempSignupRepeatPassword");
-      sessionStorage.removeItem("tempSignupType");
+      // sessionStorage.removeItem("tempSignupType");
       sessionStorage.removeItem("tempAgreedToTerms");
       sessionStorage.removeItem("tempAgreedToVoice");
       sessionStorage.removeItem("tempAgreedToCopyright");

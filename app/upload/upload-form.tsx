@@ -6,7 +6,7 @@ import { useSupabaseUpload } from '@/hooks/use-supabase-upload'
 import { useQueueMonitor } from '@/hooks/use-queue-monitor'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Play, Pause, Mic, Square, RotateCcw, Music, User, Share2, ArrowLeft } from 'lucide-react'
+import { Play, Pause, Mic, Square, Music, User, Share2, ArrowLeft } from 'lucide-react'
 import { QueueStatusDisplay } from '@/components/QueueStatusDisplay'
 
 // Supabase Storage list 반환 객체 타입 정의
