@@ -16,13 +16,13 @@ export default function Page() {
           <Card>
             <CardHeader>
               <CardTitle className="text-2xl">
-                회원가입이 완료되었습니다!
+                이메일 인증이 필요합니다
               </CardTitle>
-              <CardDescription>이메일을 확인하여 계정을 인증해주세요</CardDescription>
+              <CardDescription>가입하신 이메일 주소로 인증 메일을 발송했습니다</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                회원가입이 성공적으로 완료되었습니다. 로그인하기 전에 이메일을 확인하여 계정을 인증해주세요.
+                이메일함을 확인하여 인증 링크를 클릭해주세요. 인증이 완료되면 로그인이 가능합니다.
               </p>
             </CardContent>
           </Card>
