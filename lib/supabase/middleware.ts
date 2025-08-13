@@ -3,10 +3,58 @@ import { NextResponse, type NextRequest } from "next/server";
 import { hasEnvVars } from "../utils";
 import { type User } from "@supabase/supabase-js";
 
-// Verified User 판별 함수
+// 허용된 라우트 목록 (인증이 필요하지 않은 페이지들)
+// 
+// 🚨 새로운 페이지 추가 시 주의사항:
+// 1. 공개 페이지 (로그인 없이 접근 가능): ALLOWED_ROUTES에 추가
+// 2. 보호된 페이지 (로그인 + 약관 동의 필요): 추가하지 않음
+// 3. 추가 후 개발 환경에서 경고 메시지 확인
+//
+// 예시:
+// - 새로운 공개 페이지 '/about' 추가 시: ALLOWED_ROUTES에 '/about' 추가
+// - 새로운 보호된 페이지 '/dashboard' 추가 시: 추가하지 않음 (자동으로 보호됨)
+//
+const ALLOWED_ROUTES = [
+  '/',                    // 홈페이지 (루트)
+  '/auth',                // 인증 관련 페이지들 (로그인, 회원가입, 약관 등)
+  '/api',                 // API 엔드포인트들
+  '/share',               // 공유 페이지들 (TTS 결과 공유)
+  '/demo',                // 데모 페이지들 (오디오 플레이어 데모)
+  '/tts-result'           // TTS 결과 페이지들 (공개 결과 보기)
+];
+
+// 약관 동의 상태 캐시 (성능 향상을 위해)
+const VERIFICATION_CACHE = new Map<string, boolean>();
+
+// 라우트가 허용되는지 확인하는 함수
+const isAllowedRoute = (pathname: string): boolean => {
+  const allowed = ALLOWED_ROUTES.some(route => pathname.startsWith(route));
+  
+  // 개발 환경에서 새로운 라우트 경고
+  if (process.env.NODE_ENV === 'development' && !allowed && !pathname.startsWith('/_next')) {
+    console.warn(`🚨 새로운 라우트: ${pathname} - 미들웨어 허용 목록에 추가 필요`);
+    console.warn(`💡 공개 페이지라면 ALLOWED_ROUTES에 추가하세요.`);
+    console.warn(`💡 보호된 페이지라면 추가하지 마세요. (자동으로 보호됨)`);
+  }
+  
+  return allowed;
+};
+
+// 약관 동의 상태 캐시 무효화 함수
+export const invalidateVerificationCache = (userId: string) => {
+  VERIFICATION_CACHE.delete(userId);
+};
+
+// Verified User 판별 함수 (캐싱 적용)
 function isVerifiedUser(user: User | null): boolean {
   if (!user) {
     return false;
+  }
+  
+  // 캐시된 결과가 있으면 반환
+  const userId = user.id;
+  if (VERIFICATION_CACHE.has(userId)) {
+    return VERIFICATION_CACHE.get(userId)!;
   }
   
   // 필수 약관 3개 모두 동의했는지 확인
@@ -20,7 +68,12 @@ function isVerifiedUser(user: User | null): boolean {
                          user.user_metadata?.copyright_agreed === 'true' || 
                          user.user_metadata?.copyright_agreed === '1';
   
-  return termsAgreed && voiceAgreed && copyrightAgreed;
+  const isVerified = termsAgreed && voiceAgreed && copyrightAgreed;
+  
+  // 결과를 캐시에 저장
+  VERIFICATION_CACHE.set(userId, isVerified);
+  
+  return isVerified;
 }
 
 export async function updateSession(request: NextRequest) {
@@ -73,11 +126,8 @@ export async function updateSession(request: NextRequest) {
 
   // 로그인하지 않은 사용자 처리
   if (
-    request.nextUrl.pathname !== "/" &&
-    !user &&
-    !request.nextUrl.pathname.startsWith("/login") &&
-    !request.nextUrl.pathname.startsWith("/auth") &&
-    !request.nextUrl.pathname.startsWith("/share")
+    !isAllowedRoute(request.nextUrl.pathname) &&
+    !user
   ) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone();
@@ -85,26 +135,33 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // 로그인한 사용자이지만 약관 동의를 완료하지 않은 경우
-  if (user && !isVerifiedUser(user)) {
-    // 약관 동의 페이지로 리다이렉트 (약관 동의 페이지 자체는 제외)
-    if (!request.nextUrl.pathname.startsWith("/auth/terms") &&
-        !request.nextUrl.pathname.startsWith("/auth/login") &&
-        !request.nextUrl.pathname.startsWith("/auth/sign-up") &&
-        !request.nextUrl.pathname.startsWith("/auth/sign-up-success") &&
-        !request.nextUrl.pathname.startsWith("/auth/error") &&
-        !request.nextUrl.pathname.startsWith("/auth/auth-code-error") &&
-        !request.nextUrl.pathname.startsWith("/auth/forgot-password") &&
-        !request.nextUrl.pathname.startsWith("/auth/update-password") &&
-        !request.nextUrl.pathname.startsWith("/auth/confirm") &&
-        !request.nextUrl.pathname.startsWith("/auth/callback") &&
-        !request.nextUrl.pathname.startsWith("/auth/email-confirmed")) {
-      
-      const url = request.nextUrl.clone();
-      url.pathname = "/auth/terms";
-      return NextResponse.redirect(url);
+  // 로그인한 사용자 처리
+  if (user) {
+    const isVerified = isVerifiedUser(user);
+    const isTermsPage = request.nextUrl.pathname.startsWith("/auth/terms");
+    
+    // 약관 동의하지 않은 사용자 처리
+    if (!isVerified) {
+      // 허용된 라우트가 아닌 곳으로 이동하려고 하면 로그아웃
+      if (!isAllowedRoute(request.nextUrl.pathname)) {
+        // 로그아웃 처리
+        await supabase.auth.signOut();
+        
+        // 로그인 페이지로 리다이렉트
+        const url = request.nextUrl.clone();
+        url.pathname = "/auth/login";
+        return NextResponse.redirect(url);
+      }
+    } else {
+      // 약관 동의 완료한 사용자가 약관 페이지에 있으면 홈으로 리다이렉트
+      if (isTermsPage) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/";
+        return NextResponse.redirect(url);
+      }
     }
   }
+  
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
   // If you're creating a new response object with NextResponse.next() make sure to:
   // 1. Pass the request in it, like so:

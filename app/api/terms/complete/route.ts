@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { invalidateVerificationCache } from "@/lib/supabase/middleware";
 
 export async function POST(request: NextRequest) {
   try {
@@ -57,6 +58,9 @@ export async function POST(request: NextRequest) {
 
     // 결과 확인
     if (data && data.success) {
+      // 약관 동의 완료 시 미들웨어 캐시 무효화
+      invalidateVerificationCache(user.id);
+      
       return NextResponse.json({
         success: true,
         message: "약관 동의가 완료되었습니다."
