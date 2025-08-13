@@ -28,14 +28,23 @@ const VERIFICATION_CACHE = new Map<string, boolean>();
 
 // 라우트가 허용되는지 확인하는 함수
 const isAllowedRoute = (pathname: string): boolean => {
-  const allowed = ALLOWED_ROUTES.some(route => pathname.startsWith(route));
+  const allowed = ALLOWED_ROUTES.some(route => {
+    // 정확한 경로 매칭을 위해 더 정교한 로직 사용
+    if (route === '/') {
+      // 루트 경로는 정확히 '/'인 경우만 허용
+      return pathname === '/';
+    } else {
+      // 다른 경로들은 해당 경로로 시작하는지 확인
+      return pathname.startsWith(route);
+    }
+  });
   
-  // 개발 환경에서 새로운 라우트 경고
-  if (process.env.NODE_ENV === 'development' && !allowed && !pathname.startsWith('/_next')) {
-    console.warn(`🚨 새로운 라우트: ${pathname} - 미들웨어 허용 목록에 추가 필요`);
-    console.warn(`💡 공개 페이지라면 ALLOWED_ROUTES에 추가하세요.`);
-    console.warn(`💡 보호된 페이지라면 추가하지 마세요. (자동으로 보호됨)`);
-  }
+  // 개발 환경에서 새로운 라우트 경고 (비활성화)
+  // if (process.env.NODE_ENV === 'development' && !allowed && !pathname.startsWith('/_next')) {
+  //   console.warn(`🚨 새로운 라우트: ${pathname} - 미들웨어 허용 목록에 추가 필요`);
+  //   console.warn(`💡 공개 페이지라면 ALLOWED_ROUTES에 추가하세요.`);
+  //   console.warn(`💡 보호된 페이지라면 추가하지 마세요. (자동으로 보호됨)`);
+  // }
   
   return allowed;
 };
@@ -132,6 +141,8 @@ export async function updateSession(request: NextRequest) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone();
     url.pathname = "/auth/login";
+    // 원래 가려던 페이지 정보를 쿼리 파라미터로 전달
+    url.searchParams.set('redirectTo', request.nextUrl.pathname);
     return NextResponse.redirect(url);
   }
 

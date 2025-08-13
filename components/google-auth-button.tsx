@@ -3,19 +3,29 @@
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { FcGoogle } from 'react-icons/fc';
+import { useSearchParams } from 'next/navigation';
 
 export function GoogleAuthButton() {
   const supabase = createClient();
+  const searchParams = useSearchParams();
 
   const handleSignIn = async () => {
+    // redirectTo 쿼리 파라미터 확인
+    const redirectTo = searchParams.get('redirectTo');
+    
     // 환경 변수에서 기본 URL을 가져오거나, 개발 환경에서는 localhost 사용
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
       (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
     
+    // redirectTo가 있으면 콜백 URL에 쿼리 파라미터로 전달
+    const callbackUrl = redirectTo 
+      ? `${baseUrl}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`
+      : `${baseUrl}/auth/callback`;
+    
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${baseUrl}/auth/callback`,
+        redirectTo: callbackUrl,
         // 약관 동의 정보는 전달하지 않음 - 콜백에서 약관 동의 페이지로 리다이렉트
       },
     });

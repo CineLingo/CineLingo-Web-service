@@ -57,6 +57,7 @@ export default function UserResultsPage() {
       if (user) {
         setUserId(user.id)
       }
+      // 로그인하지 않은 사용자는 미들웨어에서 처리되므로 여기서는 아무것도 하지 않음
     }
     fetchUser()
   }, [supabase])

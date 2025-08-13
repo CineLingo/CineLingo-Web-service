@@ -14,8 +14,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
 
 export function LoginForm({
   className,
@@ -25,7 +25,17 @@ export function LoginForm({
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [redirectTo, setRedirectTo] = useState<string | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // redirectTo 쿼리 파라미터 확인
+  useEffect(() => {
+    const redirectParam = searchParams.get('redirectTo');
+    if (redirectParam) {
+      setRedirectTo(redirectParam);
+    }
+  }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,8 +49,9 @@ export function LoginForm({
         password,
       });
       if (error) throw error;
-      // 로그인 후 실제 서비스 페이지로 리다이렉트
-      router.push("/");
+      // 로그인 후 리다이렉트할 페이지가 있으면 해당 페이지로, 없으면 홈으로
+      const targetPath = redirectTo || "/";
+      router.push(targetPath);
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "오류가 발생했습니다");
     } finally {
