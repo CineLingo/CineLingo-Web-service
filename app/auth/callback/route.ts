@@ -8,7 +8,7 @@ export async function GET(request: Request) {
   // redirectTo 쿼리 파라미터 확인 (Google 로그인에서 전달된 경우)
   const redirectTo = searchParams.get("redirectTo");
   // 로그인 후 메인 페이지로 이동 (기본값)
-  const next = redirectTo || searchParams.get("next") ?? "/";
+  const next = redirectTo || (searchParams.get("next") ?? "/");
 
   if (code) {
     const supabase = await createClient();
