@@ -22,11 +22,10 @@ type TTSRequestDetail = {
     gen_file_url: string; 
     gen_file_path: string;
     gen_text?: string;
-    gen_audio_duration?: number;
+    gen_duration?: number;
     gen_is_public: boolean;
     gen_shared_title?: string;
     gen_shared_image?: string;
-    ref_text_while_gen?: string;
   }[]
 }
 
@@ -79,7 +78,7 @@ export default function SharePage() {
         // 생성된 오디오 가져오기
         const { data: genAudioData, error: genAudioError } = await supabase
           .from('gen_audios')
-          .select('gen_file_url, gen_file_path, gen_text, gen_audio_duration, gen_is_public, gen_shared_title, gen_shared_image, ref_text_while_gen')
+          .select('gen_file_url, gen_file_path, gen_text, gen_duration, gen_is_public, gen_shared_title, gen_shared_image')
           .eq('request_id', ttsData.request_id)
           .limit(1)
 
@@ -304,7 +303,7 @@ export default function SharePage() {
 
           {/* 변환할 텍스트 */}
           <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">변환할 텍스트</h2>
+            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">생성된 음성의 텍스트</h2>
             <div className="bg-gray-50 dark:bg-gray-700 p-3 sm:p-4 rounded-lg">
               <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 whitespace-pre-wrap leading-relaxed">
                 {ttsRequest.gen_text_at_request}

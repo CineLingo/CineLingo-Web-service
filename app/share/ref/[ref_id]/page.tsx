@@ -319,7 +319,7 @@ export default function ShareRefPage() {
 
           {/* 참조 텍스트 */}
           <div className="mb-6">
-            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">참조 텍스트</h2>
+            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">참조 음성의 텍스트</h2>
             <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
               <p className="text-gray-900 dark:text-gray-100 text-sm sm:text-base leading-relaxed">
                 {refAudio?.ref_text || '참조 텍스트가 없습니다.'}
