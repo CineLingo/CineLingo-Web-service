@@ -153,14 +153,11 @@ export async function updateSession(request: NextRequest) {
     
     // 약관 동의하지 않은 사용자 처리
     if (!isVerified) {
-      // 허용된 라우트가 아닌 곳으로 이동하려고 하면 로그아웃
+      // 허용된 라우트가 아닌 곳으로 이동하려고 하면 약관 동의 페이지로 리다이렉트
       if (!isAllowedRoute(request.nextUrl.pathname)) {
-        // 로그아웃 처리
-        await supabase.auth.signOut();
-        
-        // 로그인 페이지로 리다이렉트
+        // 약관 동의 페이지로 리다이렉트
         const url = request.nextUrl.clone();
-        url.pathname = "/auth/login";
+        url.pathname = "/auth/terms";
         return NextResponse.redirect(url);
       }
     } else {
