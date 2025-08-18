@@ -2,6 +2,30 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Navbar theming via data attribute */
+/* 업로드 페이지 - 다크모드에서만 어두운 톤 적용 */
+html.dark[data-nav-theme="upload"] .site-navbar {
+  /* gray-900 with 80% */
+  background-color: rgba(17, 24, 39, 0.8);
+  backdrop-filter: blur(8px);
+}
+
+/* 업로드 페이지 - 라이트 모드에서는 완전 흰색으로 고정 */
+html:not(.dark)[data-nav-theme="upload"] .site-navbar {
+  background-color: #ffffff;
+}
+
+/* Prevent layout shift when vertical scrollbar appears */
+html {
+  scrollbar-gutter: stable both-edges;
+}
+
+@supports not (scrollbar-gutter: stable) {
+  html {
+    overflow-y: scroll;
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

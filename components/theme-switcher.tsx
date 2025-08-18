@@ -55,7 +55,19 @@ const ThemeSwitcher = () => {
       <DropdownMenuContent className="w-content" align="start">
         <DropdownMenuRadioGroup
           value={theme}
-          onValueChange={(e) => setTheme(e)}
+          onValueChange={(next) => {
+            setTheme(next);
+            // 테마 변경 시 상단바 아티팩트와 레이아웃 시프트를 방지하기 위해 새로고침
+            // 스크롤 위치를 저장했다가 복원
+            const scrollY = window.scrollY;
+            setTimeout(() => {
+              if (typeof window !== "undefined") {
+                window.location.reload();
+                // 새로고침 후 스크롤 위치 복원을 위해 sessionStorage에 저장
+                sessionStorage.setItem('scrollPosition', scrollY.toString());
+              }
+            }, 50);
+          }}
         >
           <DropdownMenuRadioItem className="flex gap-2" value="light">
             <Sun size={ICON_SIZE} className="text-muted-foreground" />{" "}

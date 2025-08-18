@@ -1,10 +1,10 @@
 import FileUploadDemo from "./upload-form"
-import HomeButton from "@/components/home-button"
+import { NavTheme } from "@/components/nav-theme"
 
 export default function UploadPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center p-4">
-      <HomeButton variant="floating" />
+      <NavTheme theme="upload" />
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">음성 변환</h1>

@@ -4,6 +4,8 @@ import { ThemeProvider } from "next-themes";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
+import { SiteNavbar } from "@/components/site-navbar";
+import { ScrollRestorer } from "@/components/scroll-restorer";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -55,6 +57,8 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
+          <SiteNavbar />
+          <ScrollRestorer />
           {children}
         </ThemeProvider>
         <Analytics />
