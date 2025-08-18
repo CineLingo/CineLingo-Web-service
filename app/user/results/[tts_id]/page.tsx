@@ -367,18 +367,8 @@ export default function TTSResultDetailPage() {
                 </div>
                 
                 {/* 생성된 음성 정보 */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                  {ttsRequest.gen_audios[0].gen_duration && (
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                        재생 시간
-                      </label>
-                      <p className="text-gray-900 dark:text-gray-100">
-                        {Math.round(ttsRequest.gen_audios[0].gen_duration)}초
-                      </p>
-                    </div>
-                  )}
-                  {ttsRequest.gen_audios[0].gen_shared_title && (
+                {ttsRequest.gen_audios[0].gen_shared_title && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                     <div>
                       <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
                         공유 제목
@@ -387,8 +377,8 @@ export default function TTSResultDetailPage() {
                         {ttsRequest.gen_audios[0].gen_shared_title}
                       </p>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
                 
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
