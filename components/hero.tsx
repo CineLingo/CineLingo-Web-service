@@ -8,7 +8,7 @@ export function Hero() {
       <div className="flex flex-col items-center text-center space-y-8 sm:space-y-12 max-w-md sm:max-w-lg mx-auto">
         {/* 브랜드 타이틀 */}
         <div className="space-y-6 sm:space-y-8">
-          <h1 className="text-6xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent animate-gradient">
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent animate-gradient leading-tight">
             Lingo Voice
           </h1>
         </div>

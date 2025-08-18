@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Analytics } from "@vercel/analytics/next";
@@ -28,6 +28,11 @@ export const metadata: Metadata = {
     title: "9 Seconds: 내가 원하는 말을, 내가 듣고 싶은 목소리로.",
     description: "9초 길이의 짧은 녹음만으로, 내가 원하는 말을 내가 듣고 싶은 목소리로 자연스럽고 감정 있게 들려줍니다.",
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 const geistSans = Geist({

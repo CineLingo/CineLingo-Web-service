@@ -17,6 +17,12 @@ export default function HomeButton({
 }: HomeButtonProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const inlineStyle = variant === "floating" 
+    ? { 
+        top: "calc(env(safe-area-inset-top, 0px) + 1rem)", 
+        right: "calc(env(safe-area-inset-right, 0px) + 1rem)",
+      } 
+    : undefined;
   
   const baseClasses = "inline-flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2";
   
@@ -46,6 +52,7 @@ export default function HomeButton({
       )}
       aria-label="홈으로 돌아가기"
       onClick={handleClick}
+      style={inlineStyle}
     >
       <Home className="w-5 h-5" />
       {variant !== "minimal" && variant !== "floating" && (
