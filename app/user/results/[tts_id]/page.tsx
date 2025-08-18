@@ -313,44 +313,15 @@ export default function TTSResultDetailPage() {
             </div>
           </div>
 
-          {/* 변환할 텍스트 */}
+          {/* 생성된 음성의 텍스트 */}
           <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">변환할 텍스트</h2>
+            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">생성된 음성의 텍스트</h2>
             <div className="bg-gray-50 dark:bg-gray-700 p-3 sm:p-4 rounded-lg">
               <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 whitespace-pre-wrap leading-relaxed">
                 {ttsRequest.gen_text_at_request}
               </p>
             </div>
           </div>
-
-          {/* 참조 오디오 */}
-          {ttsRequest.ref_audios && ttsRequest.ref_audios.length > 0 && (
-            <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">참조 오디오</h2>
-              <div className="space-y-4">
-                <div className="w-full">
-                  <audio 
-                    controls 
-                    src={ttsRequest.ref_audios[0].ref_file_url} 
-                    className="w-full h-12 sm:h-14"
-                    preload="metadata"
-                  />
-                </div>
-                {ttsRequest.ref_text_at_request && (
-                  <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                      참조 음성 텍스트
-                    </label>
-                    <div className="bg-gray-50 dark:bg-gray-700 p-3 sm:p-4 rounded-lg">
-                      <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 whitespace-pre-wrap leading-relaxed">
-                        {ttsRequest.ref_text_at_request}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* 생성된 음성 */}
           <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
@@ -413,6 +384,35 @@ export default function TTSResultDetailPage() {
               </div>
             )}
           </div>
+
+          {/* 참조 오디오 */}
+          {ttsRequest.ref_audios && ttsRequest.ref_audios.length > 0 && (
+            <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">참조 오디오</h2>
+              <div className="space-y-4">
+                <div className="w-full">
+                  <audio 
+                    controls 
+                    src={ttsRequest.ref_audios[0].ref_file_url} 
+                    className="w-full h-12 sm:h-14"
+                    preload="metadata"
+                  />
+                </div>
+                {ttsRequest.ref_text_at_request && (
+                  <div>
+                    <label className="block text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
+                      참조 음성 텍스트
+                    </label>
+                    <div className="bg-gray-50 dark:bg-gray-700 p-3 sm:p-4 rounded-lg">
+                      <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 whitespace-pre-wrap leading-relaxed">
+                        {ttsRequest.ref_text_at_request}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* 오류 로그 */}
           {ttsRequest.error_log && (
