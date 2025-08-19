@@ -3,21 +3,15 @@
 import React, { useState } from 'react'
 import { Share2, X } from 'lucide-react'
 
-interface ShareButtonProps {
+interface ShareButtonCompactProps {
   ttsId: string
-  text?: string
   className?: string
-  variant?: 'default' | 'outline' | 'ghost'
-  size?: 'sm' | 'md' | 'lg'
 }
 
-export default function ShareButton({ 
+export default function ShareButtonCompact({ 
   ttsId, 
-  text = "공유하기",
-  className = "",
-  variant = "default",
-  size = "md"
-}: ShareButtonProps) {
+  className = ""
+}: ShareButtonCompactProps) {
   const [showModal, setShowModal] = useState(false)
   const [copied, setCopied] = useState(false)
 
@@ -25,7 +19,6 @@ export default function ShareButton({
 
   // 공유 버튼 클릭 핸들러
   const handleShareClick = () => {
-    // 항상 모달 표시 (더 안정적)
     setShowModal(true)
   }
 
@@ -41,37 +34,14 @@ export default function ShareButton({
     }
   }
 
-  // 버튼 스타일 클래스
-  const getButtonClasses = () => {
-    const baseClasses = "inline-flex items-center justify-center gap-2 font-medium transition-all duration-300"
-    
-    const sizeClasses = {
-      sm: "px-3 py-1.5 text-xs",
-      md: "px-4 py-3 text-sm", 
-      lg: "px-6 py-3 text-base"
-    }
-
-    const variantClasses = {
-      default: "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg",
-      outline: "border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg",
-      ghost: "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
-    }
-
-    const defaultClasses = `${baseClasses} ${sizeClasses[size]} ${variantClasses[variant]}`
-    
-    // className이 제공되면 기본 클래스와 병합
-    return className ? `${defaultClasses} ${className}` : defaultClasses
-  }
-
   return (
     <>
       <button
         onClick={handleShareClick}
-        className={getButtonClasses()}
+        className={`h-12 w-12 sm:h-11 sm:w-11 flex items-center justify-center bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded-lg transition-colors ${className}`}
         title="공유하기"
       >
-        <Share2 size={size === 'sm' ? 14 : size === 'lg' ? 18 : 16} />
-        {text}
+        <Share2 size={16} />
       </button>
 
       {/* 공유 모달 */}
@@ -130,4 +100,4 @@ export default function ShareButton({
       )}
     </>
   )
-} 
+}

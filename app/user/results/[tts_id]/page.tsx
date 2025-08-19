@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import HomeButton from '@/components/home-button'
 import ShareButton from '@/components/ShareButton'
+import ShareRefButton from '@/components/ShareRefButton'
 
 type TTSRequestDetail = {
   request_id: string
@@ -143,7 +144,7 @@ export default function TTSResultDetailPage() {
   // 상태에 따른 아이콘과 색상
   const getStatusInfo = (status: string) => {
     switch (status) {
-      case 'success':
+      case 'completed':
         return {
           icon: <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />,
           color: 'text-green-600 dark:text-green-400',
@@ -264,67 +265,40 @@ export default function TTSResultDetailPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
-        <HomeButton variant="floating" />
         
         {/* 헤더 */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
-          <div className="flex items-center gap-3 sm:gap-4">
-            <Link 
-              href="/user/results"
-              className="inline-flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 dark:hover:from-blue-800/30 dark:hover:to-purple-800/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 rounded-lg transition-all duration-300 text-sm"
-            >
-              <ArrowLeft size={16} />
-              <span className="hidden sm:inline">목록</span>
-            </Link>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">TTS 요청 상세</h1>
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <Link 
+                href="/user/results"
+                className="inline-flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2 bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 dark:hover:from-blue-800/30 dark:hover:to-purple-800/30 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 rounded-lg transition-all duration-300 text-sm"
+              >
+                <ArrowLeft size={16} />
+                <span className="hidden sm:inline">목록</span>
+              </Link>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">TTS 요청 상세</h1>
+            </div>
+            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${statusInfo.bgColor}`}>
+              {statusInfo.icon}
+              <span className={`font-semibold text-sm ${statusInfo.color}`}>
+                {statusInfo.text}
+              </span>
+            </div>
           </div>
-          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${statusInfo.bgColor} self-start sm:self-auto`}>
-            {statusInfo.icon}
-            <span className={`font-semibold text-sm ${statusInfo.color}`}>
-              {statusInfo.text}
-            </span>
+        </div>
+
+        {/* 생성 시간 */}
+        <div className="px-4 sm:px-6 pb-2 sm:pb-3">
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            {formatDate(ttsRequest.created_at)}
           </div>
         </div>
 
         {/* 메인 컨텐츠 */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
-          {/* 요청 정보 */}
-          <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">요청 정보</h2>
-            <div className="grid grid-cols-1 gap-3 sm:gap-4">
-              <div>
-                <label className="block text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                  요청 시간
-                </label>
-                <p className="text-sm text-gray-900 dark:text-gray-100">
-                  {formatDate(ttsRequest.created_at)}
-                </p>
-              </div>
-              {ttsRequest.updated_at && ttsRequest.updated_at !== ttsRequest.created_at && (
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                    최종 업데이트
-                  </label>
-                  <p className="text-sm text-gray-900 dark:text-gray-100">
-                    {formatDate(ttsRequest.updated_at)}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* 생성된 음성의 텍스트 */}
-          <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">생성된 음성의 텍스트</h2>
-            <div className="bg-gray-50 dark:bg-gray-700 p-3 sm:p-4 rounded-lg">
-              <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 whitespace-pre-wrap leading-relaxed">
-                {ttsRequest.gen_text_at_request}
-              </p>
-            </div>
-          </div>
-
           {/* 생성된 음성 */}
-          <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="p-4 sm:p-6">
             <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">생성된 음성</h2>
             {ttsRequest.gen_audios && ttsRequest.gen_audios.length > 0 ? (
               <div className="space-y-4">
@@ -350,31 +324,6 @@ export default function TTSResultDetailPage() {
                     </div>
                   </div>
                 )}
-                
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <button
-                    onClick={() => {
-                      const url = ttsRequest.gen_audios?.[0]?.gen_file_url;
-                      if (url) {
-                        handleDownload(url, `tts-generated-${ttsRequest.request_id}.mp3`);
-                      } else {
-                        alert('음성 파일 URL을 찾을 수 없습니다.');
-                      }
-                    }}
-                    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-all duration-300 text-sm font-medium touch-manipulation"
-                  >
-                    <Download size={16} />
-                    음성 파일 다운로드
-                  </button>
-                  <div className="flex-1 sm:flex-none">
-                    <ShareButton 
-                      ttsId={ttsRequest.request_id}
-                      text="공유하기"
-                      variant="outline"
-                      size="md"
-                    />
-                  </div>
-                </div>
               </div>
             ) : (
               <div className="text-center py-6 sm:py-8">
@@ -385,32 +334,84 @@ export default function TTSResultDetailPage() {
             )}
           </div>
 
-          {/* 참조 오디오 */}
-          {ttsRequest.ref_audios && ttsRequest.ref_audios.length > 0 && (
-            <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">참조 오디오</h2>
-              <div className="space-y-4">
-                <div className="w-full">
-                  <audio 
-                    controls 
-                    src={ttsRequest.ref_audios[0].ref_file_url} 
-                    className="w-full h-12 sm:h-14"
-                    preload="metadata"
+          {/* 생성된 음성의 텍스트 */}
+          <div className="px-4 sm:px-6 pb-4 sm:pb-6">
+            <div className="bg-gray-50 dark:bg-gray-700 p-3 sm:p-4 rounded-lg">
+              <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 whitespace-pre-wrap leading-relaxed">
+                {ttsRequest.gen_text_at_request}
+              </p>
+            </div>
+            
+            {/* 음성 파일 다운로드, 공유하기 */}
+            {ttsRequest.gen_audios && ttsRequest.gen_audios.length > 0 && (
+              <div className="mt-4">
+                <div className="flex flex-row gap-3">
+                  <button
+                    onClick={() => {
+                      const url = ttsRequest.gen_audios?.[0]?.gen_file_url;
+                      if (url) {
+                        handleDownload(url, `tts-generated-${ttsRequest.request_id}.mp3`);
+                      } else {
+                        alert('음성 파일 URL을 찾을 수 없습니다.');
+                      }
+                    }}
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-all duration-300 text-sm font-medium touch-manipulation"
+                  >
+                    <Download size={16} />
+                    <span className="sm:hidden">다운로드</span>
+                    <span className="hidden sm:inline whitespace-nowrap">음성 파일 다운로드</span>
+                  </button>
+                  <ShareButton 
+                    ttsId={ttsRequest.request_id}
+                    text="공유하기"
+                    variant="outline"
+                    size="md"
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-all duration-300 text-sm font-medium touch-manipulation"
                   />
                 </div>
-                {ttsRequest.ref_text_at_request && (
-                  <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                      참조 음성 텍스트
-                    </label>
-                    <div className="bg-gray-50 dark:bg-gray-700 p-3 sm:p-4 rounded-lg">
-                      <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 whitespace-pre-wrap leading-relaxed">
-                        {ttsRequest.ref_text_at_request}
-                      </p>
-                    </div>
-                  </div>
-                )}
               </div>
+            )}
+          </div>
+
+          {/* 구분선 */}
+          <div className="border-b border-gray-200 dark:border-gray-700"></div>
+
+          {/* 참조 음성 */}
+          {ttsRequest.ref_audios && ttsRequest.ref_audios.length > 0 && (
+            <div className="p-4 sm:p-6">
+              <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">내 음성 (참조 음성)</h2>
+              <div className="w-full">
+                <audio 
+                  controls 
+                  src={ttsRequest.ref_audios[0].ref_file_url} 
+                  className="w-full h-12 sm:h-14"
+                  preload="metadata"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* 참조 음성 텍스트 */}
+          {ttsRequest.ref_text_at_request && (
+            <div className="px-4 sm:px-6 pb-4 sm:pb-6">
+              <div className="bg-gray-50 dark:bg-gray-700 p-3 sm:p-4 rounded-lg">
+                <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 whitespace-pre-wrap leading-relaxed">
+                  {ttsRequest.ref_text_at_request}
+                </p>
+              </div>
+              
+              {/* 참조 음성 공유 버튼 */}
+              {ttsRequest.reference_id && (
+                <div className="mt-4 flex items-center justify-center">
+                  <ShareRefButton
+                    refId={ttsRequest.reference_id}
+                    text="참조 음성 공유"
+                    variant="default"
+                    size="md"
+                    className="w-full h-12 sm:h-11 flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white text-sm rounded-lg transition-colors"
+                  />
+                </div>
+              )}
             </div>
           )}
 

@@ -7,6 +7,7 @@ import Link from 'next/link'
 import HomeButton from '@/components/home-button'
 import AudioPlayer from '@/components/AudioPlayer'
 import ShareButton from '@/components/ShareButton'
+import ShareButtonCompact from '@/components/ShareButtonCompact'
 import ShareRefButton from '@/components/ShareRefButton'
 import ProfileAvatarUploader from '@/components/ProfileAvatarUploader'
 import { Input } from '@/components/ui/input'
@@ -724,18 +725,13 @@ export default function UserResultsPage() {
                         title="음성 파일 다운로드"
                       >
                         <Download size={16} />
-                        <span className="hidden sm:inline">다운로드</span>
-                        <span className="sm:hidden">다운</span>
+                        <span>다운로드</span>
                       </button>
                     )}
                     
                     {/* 공유 버튼 */}
-                    <ShareButton
+                    <ShareButtonCompact
                       ttsId={row.request_id}
-                      text=""
-                      variant="default"
-                      size="sm"
-                      className="h-12 w-12 sm:h-11 sm:w-11 flex items-center justify-center bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded-lg transition-colors"
                     />
                     
                     <Link
@@ -792,8 +788,8 @@ export default function UserResultsPage() {
                         refId={row.reference_id}
                         text="참조 음성 공유"
                         variant="default"
-                        size="lg"
-                        className="w-full h-12 sm:h-11 flex items-center justify-center bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white text-sm rounded-lg transition-colors"
+                        size="md"
+                        className="w-full h-12 sm:h-11 flex items-center justify-center gap-2 bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white text-sm rounded-lg transition-colors"
                       />
                     ) : (
                       <div className="w-full h-12 sm:h-11 flex items-center justify-center gap-2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-sm rounded-lg">
