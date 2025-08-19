@@ -5,8 +5,8 @@
 /* Navbar theming via data attribute */
 /* 업로드 페이지 - 다크모드에서만 어두운 톤 적용 */
 html.dark[data-nav-theme="upload"] .site-navbar {
-  /* gray-900 with 80% */
-  background-color: rgba(17, 24, 39, 0.8);
+  /* gray-900과 동일한 색상이지만 반투명으로 블러 효과 유지 */
+  background-color: rgba(17, 24, 39, 0.95);
   backdrop-filter: blur(8px);
 }
 
