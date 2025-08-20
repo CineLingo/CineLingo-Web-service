@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 interface HomeButtonProps {
   className?: string;
@@ -16,7 +16,6 @@ export default function HomeButton({
   variant = "default" 
 }: HomeButtonProps) {
   
-  const router = useRouter();
   const pathname = usePathname();
   const inlineStyle = variant === "floating" 
     ? { 
