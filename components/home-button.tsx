@@ -15,6 +15,7 @@ export default function HomeButton({
   className, 
   variant = "default" 
 }: HomeButtonProps) {
+  
   const router = useRouter();
   const pathname = usePathname();
   const inlineStyle = variant === "floating" 
@@ -38,7 +39,8 @@ export default function HomeButton({
       e.preventDefault();
       const supabase = createClient();
       await supabase.auth.signOut();
-      router.push("/");
+      // 페이지 새로고침하여 상단바 상태 업데이트
+      window.location.href = "/";
     }
   };
 

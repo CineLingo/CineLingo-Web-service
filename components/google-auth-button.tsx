@@ -13,9 +13,8 @@ export function GoogleAuthButton() {
     // redirectTo 쿼리 파라미터 확인
     const redirectTo = searchParams.get('redirectTo');
     
-    // 환경 변수에서 기본 URL을 가져오거나, 개발 환경에서는 localhost 사용
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 
-      (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+    // 현재 도메인을 기반으로 콜백 URL 생성
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
     
     // redirectTo가 있으면 콜백 URL에 쿼리 파라미터로 전달
     const callbackUrl = redirectTo 

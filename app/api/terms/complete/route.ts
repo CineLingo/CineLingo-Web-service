@@ -58,6 +58,21 @@ export async function POST(request: NextRequest) {
 
     // 결과 확인
     if (data && data.success) {
+      // 사용자 메타데이터 즉시 업데이트
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: {
+          terms_agreed: terms_agreed,
+          voice_agreed: voice_agreed,
+          copyright_agreed: copyright_agreed,
+          ai_agreed: ai_agreed
+        }
+      });
+
+      if (updateError) {
+        console.error('사용자 메타데이터 업데이트 오류:', updateError);
+        // 메타데이터 업데이트 실패해도 약관 동의는 성공으로 처리
+      }
+
       // 약관 동의 완료 시 미들웨어 캐시 무효화
       invalidateVerificationCache(user.id);
       
