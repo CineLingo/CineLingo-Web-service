@@ -6,7 +6,6 @@ import { Download, Eye, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw, Vol
 import Link from 'next/link'
 import HomeButton from '@/components/home-button'
 import AudioPlayer from '@/components/AudioPlayer'
-import ShareButton from '@/components/ShareButton'
 import ShareButtonCompact from '@/components/ShareButtonCompact'
 import ShareRefButton from '@/components/ShareRefButton'
 import ProfileAvatarUploader from '@/components/ProfileAvatarUploader'
