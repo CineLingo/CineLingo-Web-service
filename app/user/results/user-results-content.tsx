@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import ProfileAvatarUploader from "@/components/ProfileAvatarUploader";
 import ShareButtonCompact from "@/components/ShareButtonCompact";
@@ -64,7 +64,7 @@ export default function UserResultsContent() {
   }, [supabase])
 
   // user_id로 모든 TTS 요청 불러오기
-  const fetchRows = async () => {
+  const fetchRows = useCallback(async () => {
     if (!userId) return;
 
     const { data, error } = await supabase
@@ -111,10 +111,10 @@ export default function UserResultsContent() {
 
     setRows(rowsWithRefAudio as TTSRequestRow[]);
     setLoading(false);
-  };
+  }, [userId, supabase]);
 
   // 프로필 정보 가져오기
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     if (!userId) return;
 
     const { data, error } = await supabase
@@ -158,7 +158,7 @@ export default function UserResultsContent() {
     setProfile(profileData);
     setEditName(profileData.display_name || '');
     setProfileLoading(false);
-  };
+  }, [userId, supabase]);
 
   useEffect(() => {
     fetchRows();
@@ -676,7 +676,7 @@ export default function UserResultsContent() {
                     {row.gen_audios && row.gen_audios.length > 0 ? (
                       <div className="w-full">
                         <AudioPlayer 
-                          audioUrl={`${row.gen_audios[0].gen_file_url}?t=${Date.now()}`} 
+                          audioUrl={row.gen_audios[0].gen_file_url} 
                           width={isMobile ? 350 : 400} 
                           height={isMobile ? 60 : 50}
                         />

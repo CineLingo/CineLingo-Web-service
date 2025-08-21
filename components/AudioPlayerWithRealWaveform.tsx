@@ -67,8 +67,13 @@ export default function AudioPlayerWithRealWaveform({
         setWaveformData(normalizedWaveform)
       } catch (error) {
         console.error('웨이브폼 생성 실패:', error)
-        // 폴백: 더미 데이터 생성
-        setWaveformData(Array.from({ length: 100 }, () => Math.random() * 0.8 + 0.2))
+        // 폴백: 더미 데이터 생성 (일관된 데이터)
+        const fallbackData = []
+        for (let i = 0; i < 100; i++) {
+          const x = Math.sin(i * 0.3) * 0.5 + 0.5
+          fallbackData.push(x * 0.8 + 0.2)
+        }
+        setWaveformData(fallbackData)
       }
     }
 
