@@ -33,8 +33,18 @@ export default function HomeButton({
   };
 
   const handleClick = async (e: React.MouseEvent) => {
+    // 이메일 회원가입 관련 sessionStorage 정리
+    sessionStorage.removeItem("tempSignupType");
+    sessionStorage.removeItem("tempSignupEmail");
+    sessionStorage.removeItem("tempSignupPassword");
+    sessionStorage.removeItem("tempSignupRepeatPassword");
+    sessionStorage.removeItem("tempAgreedToTerms");
+    sessionStorage.removeItem("tempAgreedToVoice");
+    sessionStorage.removeItem("tempAgreedToCopyright");
+    sessionStorage.removeItem("tempAgreedToAI");
+    
     // auth/terms 페이지에서 홈 버튼을 클릭할 때 로그아웃 후 홈으로 이동
-    if (pathname === "/auth/terms") {
+    if (pathname.startsWith("/auth/terms")) {
       e.preventDefault();
       const supabase = createClient();
       await supabase.auth.signOut();

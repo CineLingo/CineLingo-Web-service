@@ -55,6 +55,14 @@ export function SignUpForm({
     if (storedAgreedToVoice === "true") setAgreedToVoice(true);
     if (storedAgreedToCopyright === "true") setAgreedToCopyright(true);
     if (storedAgreedToAI === "true") setAgreedToAI(true);
+
+    // 페이지를 벗어날 때(언마운트) 약관 동의 임시 상태 초기화
+    return () => {
+      sessionStorage.removeItem("tempAgreedToTerms");
+      sessionStorage.removeItem("tempAgreedToVoice");
+      sessionStorage.removeItem("tempAgreedToCopyright");
+      sessionStorage.removeItem("tempAgreedToAI");
+    };
   }, []);
 
   const handleEmailSignUp = async (e: React.FormEvent) => {
@@ -104,7 +112,7 @@ export function SignUpForm({
       sessionStorage.removeItem("tempSignupEmail");
       sessionStorage.removeItem("tempSignupPassword");
       sessionStorage.removeItem("tempSignupRepeatPassword");
-      // sessionStorage.removeItem("tempSignupType");
+      sessionStorage.removeItem("tempSignupType");
       sessionStorage.removeItem("tempAgreedToTerms");
       sessionStorage.removeItem("tempAgreedToVoice");
       sessionStorage.removeItem("tempAgreedToCopyright");
@@ -118,6 +126,28 @@ export function SignUpForm({
     }
   };
 
+  // 약관 동의 상태 초기화 및 약관 페이지로 이동
+  const handleResetTerms = () => {
+    // 현재 입력값 보존 (다시 돌아왔을 때 이어서 입력 가능)
+    sessionStorage.setItem("tempSignupEmail", email);
+    sessionStorage.setItem("tempSignupPassword", password);
+    sessionStorage.setItem("tempSignupRepeatPassword", repeatPassword);
+    sessionStorage.setItem("tempSignupType", "email");
+
+    // 약관 동의 임시 상태 초기화
+    sessionStorage.removeItem("tempAgreedToTerms");
+    sessionStorage.removeItem("tempAgreedToVoice");
+    sessionStorage.removeItem("tempAgreedToCopyright");
+    sessionStorage.removeItem("tempAgreedToAI");
+
+    setAgreedToTerms(false);
+    setAgreedToVoice(false);
+    setAgreedToCopyright(false);
+    setAgreedToAI(false);
+
+    // 약관 페이지로 이동
+    router.push("/auth/terms/email-signup");
+  };
 
 
   return (
@@ -159,7 +189,7 @@ export function SignUpForm({
                   sessionStorage.setItem("tempSignupType", "email");
                   
                   // 약관 동의 페이지로 이동 (URL 파라미터 없이)
-                  router.push("/auth/terms");
+                  router.push("/auth/terms/email-signup");
                 }}
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
               >
@@ -171,56 +201,78 @@ export function SignUpForm({
             </div>
           ) : (
             // 약관 동의 후: 실제 회원가입 폼
-            <form onSubmit={handleEmailSignUp}>
-              <div className="flex flex-col gap-6">
-                <div className="grid gap-2">
-                  <Label htmlFor="email">이메일</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="m@example.com"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <div className="flex items-center">
-                    <Label htmlFor="password">비밀번호</Label>
+            <div className="space-y-4">
+              {/* 약관 동의 완료 알림 및 재동의 버튼 */}
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                      ✓ 약관에 동의하셨습니다
+                    </span>
                   </div>
-                  <Input
-                    id="password"
-                    type="password"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleResetTerms}
+                    className="text-xs h-8 px-3 border-green-300 dark:border-green-700 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-800"
+                  >
+                    약관 다시 보기
+                  </Button>
                 </div>
-                <div className="grid gap-2">
-                  <div className="flex items-center">
-                    <Label htmlFor="repeat-password">비밀번호 확인</Label>
-                  </div>
-                  <Input
-                    id="repeat-password"
-                    type="password"
-                    required
-                    value={repeatPassword}
-                    onChange={(e) => setRepeatPassword(e.target.value)}
-                  />
-                </div>
-                
-                {error && <p className="text-sm text-red-500">{error}</p>}
-                
-                {/* 약관 동의 상태 표시 */}
-                <div className="text-sm text-green-600 bg-green-50 p-3 rounded-md">
-                  ✓ 약관에 동의하셨습니다
-                </div>
-                
-                <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300" disabled={isLoading}>
-                  {isLoading ? "계정 생성 중..." : "이메일로 회원가입"}
-                </Button>
               </div>
-            </form>
+              
+              <form onSubmit={handleEmailSignUp}>
+                <div className="flex flex-col gap-6">
+                  <div className="grid gap-2">
+                    <Label htmlFor="email">이메일</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="m@example.com"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <div className="flex items-center">
+                      <Label htmlFor="password">비밀번호</Label>
+                    </div>
+                    <Input
+                      id="password"
+                      type="password"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <div className="flex items-center">
+                      <Label htmlFor="repeatPassword">비밀번호 확인</Label>
+                    </div>
+                    <Input
+                      id="repeatPassword"
+                      type="password"
+                      required
+                      value={repeatPassword}
+                      onChange={(e) => setRepeatPassword(e.target.value)}
+                    />
+                  </div>
+                  
+                  {error && <p className="text-sm text-red-500">{error}</p>}
+                  
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
+                  >
+                    {isLoading ? "처리 중..." : "회원가입"}
+                  </Button>
+                </div>
+              </form>
+            </div>
           )}
           
           <div className="mt-4 text-center text-sm">

@@ -1,16 +1,6 @@
-import { TermsAgreementForm } from "@/components/terms-agreement-form";
-import HomeButton from "@/components/home-button";
-import { Suspense } from "react";
+import { redirect } from "next/navigation";
 
-export default function Page() {
-  return (
-    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-      <HomeButton variant="floating" />
-      <div className="w-full max-w-2xl">
-        <Suspense fallback={<div>Loading...</div>}>
-          <TermsAgreementForm />
-        </Suspense>
-      </div>
-    </div>
-  );
+export default function TermsPage() {
+  // 기본 약관 페이지 접근 시 이메일 회원가입으로 리다이렉트
+  redirect('/auth/terms/email-signup');
 } 

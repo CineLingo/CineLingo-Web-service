@@ -1,18 +1,55 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "./ui/button";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/client";
 import { LogoutButton } from "./logout-button";
+import { useEffect, useState } from "react";
+import { User } from "@supabase/supabase-js";
+import { LoadingSpinner } from "./ui/loading";
 
-export async function AuthButton() {
-  const supabase = await createClient();
+export function AuthButton() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true); // 다시 true로 복원
+  const supabase = createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  useEffect(() => {
+    // 초기 사용자 상태 가져오기
+    const getUser = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        setUser(user);
+      } catch (error) {
+        console.error('Failed to get user:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getUser();
+
+    // 인증 상태 변경 감지
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setUser(session?.user ?? null);
+        setLoading(false);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, [supabase.auth]);
+
+  // 로딩 중일 때는 예쁜 스피너 표시
+  if (loading) {
+    return (
+      <div className="flex gap-2">
+        <LoadingSpinner size="sm" />
+      </div>
+    );
+  }
 
   return user ? (
     <div className="flex items-center gap-2">
-      {/* Hey, {user.email}! */}
       <Button 
         asChild 
         size="sm"

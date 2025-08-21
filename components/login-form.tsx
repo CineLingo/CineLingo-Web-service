@@ -1,46 +1,24 @@
 "use client";
 
-import { GoogleAuthButton } from "@/components/google-auth-button";
-import { cn } from "@/lib/utils";
+import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { GoogleAuthButton } from "@/components/google-auth-button";
 
-export function LoginForm({
-  className,
-  ...props
-}: React.ComponentPropsWithoutRef<"div">) {
+export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [redirectTo, setRedirectTo] = useState<string | null>(null);
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  // redirectTo 쿼리 파라미터 확인
-  useEffect(() => {
-    const redirectParam = searchParams.get('redirectTo');
-    if (redirectParam) {
-      setRedirectTo(redirectParam);
-    }
-  }, [searchParams]);
+  const supabase = createClient();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const supabase = createClient();
-    setIsLoading(true);
+    setLoading(true);
     setError(null);
 
     try {
@@ -49,18 +27,19 @@ export function LoginForm({
         password,
       });
       if (error) throw error;
-      // 로그인 후 리다이렉트할 페이지가 있으면 해당 페이지로, 없으면 홈으로
-      const targetPath = redirectTo || "/";
-      router.push(targetPath);
+      
+      // 로그인 성공 후 페이지 새로고침하여 상단바 상태 즉시 반영
+      const targetPath = "/";
+      window.location.href = targetPath;
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : "오류가 발생했습니다");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className={cn("flex flex-col gap-6", className)} {...props}>
+    <div className="flex flex-col gap-6">
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">로그인</CardTitle>
@@ -101,8 +80,8 @@ export function LoginForm({
                 />
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300" disabled={isLoading}>
-                {isLoading ? "로그인 중..." : "로그인"}
+              <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300" disabled={loading}>
+                {loading ? "로그인 중..." : "로그인"}
               </Button>
             </div>
             <div className="mt-4 text-center text-sm">

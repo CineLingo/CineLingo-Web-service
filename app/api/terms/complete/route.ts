@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
-import { invalidateVerificationCache } from "@/lib/supabase/middleware";
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,7 +16,28 @@ export async function POST(request: NextRequest) {
     }
 
     // 요청 본문 파싱
-    const body = await request.json();
+    let body;
+    let redirectTo: string | null = null;
+    const contentType = request.headers.get('content-type');
+    
+    if (contentType?.includes('application/json')) {
+      body = await request.json();
+    } else if (contentType?.includes('multipart/form-data')) {
+      const formData = await request.formData();
+      body = {
+        terms_agreed: formData.get('terms_agreed') === 'true',
+        voice_agreed: formData.get('voice_agreed') === 'true',
+        copyright_agreed: formData.get('copyright_agreed') === 'true',
+        ai_agreed: formData.get('ai_agreed') === 'true'
+      };
+      redirectTo = formData.get('redirectTo') as string;
+    } else {
+      return NextResponse.json(
+        { error: "지원하지 않는 Content-Type입니다." },
+        { status: 400 }
+      );
+    }
+    
     const { terms_agreed, voice_agreed, copyright_agreed, ai_agreed } = body;
 
     // 필수 필드 검증
@@ -73,13 +93,20 @@ export async function POST(request: NextRequest) {
         // 메타데이터 업데이트 실패해도 약관 동의는 성공으로 처리
       }
 
-      // 약관 동의 완료 시 미들웨어 캐시 무효화
-      invalidateVerificationCache(user.id);
+      // 서버에서 세션 갱신
+      const { error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) {
+        console.error('서버 세션 갱신 오류:', refreshError);
+      }
+
+      // 리다이렉트할 URL 결정
+      if (!redirectTo) {
+        redirectTo = '/upload';
+      }
       
-      return NextResponse.json({
-        success: true,
-        message: "약관 동의가 완료되었습니다."
-      });
+      // 303 리다이렉트로 응답 (서버에서 세션 갱신 후)
+      const redirectUrl = new URL(redirectTo, request.url);
+      return NextResponse.redirect(redirectUrl, 303);
     } else {
       return NextResponse.json(
         { error: data?.error || "약관 동의 처리에 실패했습니다." },

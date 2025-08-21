@@ -11,138 +11,69 @@ import {
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useState } from "react";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-interface TermsData {
-  email: string;
-  password: string;
-  repeatPassword: string;
+interface TermsAgreementFormProps {
+  title: string;
+  description: string;
+  onComplete: (termsData: {
+    terms_agreed: boolean;
+    voice_agreed: boolean;
+    copyright_agreed: boolean;
+    ai_agreed: boolean;
+  }) => void;
+  error?: string | null;
+  className?: string;
 }
 
-export function TermsAgreementForm({
+export function TermsAgreementForm({ 
+  title, 
+  description, 
+  onComplete, 
+  error: propError,
   className,
-  ...props
-}: React.ComponentPropsWithoutRef<"div">) {
+  ...props 
+}: TermsAgreementFormProps) {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [agreedToVoice, setAgreedToVoice] = useState(false);
   const [agreedToCopyright, setAgreedToCopyright] = useState(false);
   const [agreedToAI, setAgreedToAI] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [signupType, setSignupType] = useState<string | null>(null);
-  const router = useRouter();
-  // const searchParams = useSearchParams();
+  const [localError, setLocalError] = useState<string | null>(null);
 
-  // 세션스토리지에서 회원가입 타입 확인
-  useEffect(() => {
-    const storedSignupType = sessionStorage.getItem("tempSignupType");
-    setSignupType(storedSignupType);
-  }, []);
-
-
-
-
+  // prop으로 받은 error와 local error를 결합
+  const error = propError || localError;
 
   const handleContinue = async () => {
-    setError(null);
-    setIsLoading(true);
-
     if (!agreedToTerms) {
-      setError("이용약관 및 개인정보 수집·이용에 동의해주세요.");
-      setIsLoading(false);
+      setLocalError("이용약관 및 개인정보 수집·이용에 동의해주세요.");
       return;
     }
 
     if (!agreedToVoice) {
-      setError("음성(민감정보)의 수집·활용에 동의해주세요.");
-      setIsLoading(false);
+      setLocalError("음성(민감정보)의 수집·활용에 동의해주세요.");
       return;
     }
 
     if (!agreedToCopyright) {
-      setError("창작 또는 공유 가능한 목소리만 업로드한다는 약관에 동의해주세요.");
-      setIsLoading(false);
+      setLocalError("창작 또는 공유 가능한 목소리만 업로드한다는 약관에 동의해주세요.");
       return;
     }
 
+    setIsLoading(true);
+
     try {
-      // 세션스토리지에서 회원가입 데이터 가져오기 (사용하지 않는 변수 주석 처리)
-      // const email = sessionStorage.getItem("tempSignupEmail") || "";
-      // const password = sessionStorage.getItem("tempSignupPassword") || "";
-      // const repeatPassword = sessionStorage.getItem("tempSignupRepeatPassword") || "";
-
-      // 이메일 회원가입의 경우 회원가입 페이지로 이동
-      if (signupType === "email") {
-        // 세션스토리지에 약관 동의 정보 저장
-        sessionStorage.setItem("tempAgreedToTerms", "true");
-        sessionStorage.setItem("tempAgreedToVoice", "true");
-        sessionStorage.setItem("tempAgreedToCopyright", "true");
-        sessionStorage.setItem("tempAgreedToAI", agreedToAI.toString());
-
-        router.push("/auth/sign-up");
-      } else {
-        // 구글 OAuth의 경우 API를 통해 약관 동의 완료
-        const response = await fetch('/api/terms/complete', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            terms_agreed: agreedToTerms,
-            voice_agreed: agreedToVoice,
-            copyright_agreed: agreedToCopyright,
-            ai_agreed: agreedToAI
-          }),
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          // 세션스토리지 정리
-          sessionStorage.removeItem("tempSignupEmail");
-          sessionStorage.removeItem("tempSignupPassword");
-          sessionStorage.removeItem("tempSignupRepeatPassword");
-          sessionStorage.removeItem("tempSignupType");
-          sessionStorage.removeItem("tempAgreedToTerms");
-          sessionStorage.removeItem("tempAgreedToVoice");
-          sessionStorage.removeItem("tempAgreedToCopyright");
-          sessionStorage.removeItem("tempAgreedToAI");
-          
-          // 약관 동의 완료 후 메인 페이지로 이동
-          router.push('/');
-        } else {
-          setError(result.error || "약관 동의 처리에 실패했습니다.");
-        }
-      }
+      onComplete({
+        terms_agreed: agreedToTerms,
+        voice_agreed: agreedToVoice,
+        copyright_agreed: agreedToCopyright,
+        ai_agreed: agreedToAI
+      });
     } catch (error) {
       console.error('약관 동의 처리 오류:', error);
-      setError("약관 동의 처리 중 오류가 발생했습니다.");
+      // 에러가 발생해도 로딩 상태는 해제
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleBack = () => {
-    // 이메일 회원가입의 경우 회원가입 페이지로 돌아가기
-    if (signupType === "email") {
-      router.push("/auth/sign-up");
-    } else {
-      // 구글 OAuth의 경우 로그아웃 처리
-      const supabase = createClient();
-      supabase.auth.signOut();
-      // 세션스토리지 정리
-      sessionStorage.removeItem("tempSignupEmail");
-      sessionStorage.removeItem("tempSignupPassword");
-      sessionStorage.removeItem("tempSignupRepeatPassword");
-      sessionStorage.removeItem("tempSignupType");
-      sessionStorage.removeItem("tempAgreedToTerms");
-      sessionStorage.removeItem("tempAgreedToVoice");
-      sessionStorage.removeItem("tempAgreedToCopyright");
-      sessionStorage.removeItem("tempAgreedToAI");
-      router.push('/auth/login');
     }
   };
 
@@ -150,18 +81,8 @@ export function TermsAgreementForm({
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">
-            {signupType === "email" 
-              ? "이메일 회원가입 - 약관 동의" 
-              : "약관 동의"
-            }
-          </CardTitle>
-          <CardDescription>
-            {signupType === "email"
-              ? "CineLingo 서비스 이용을 위한 약관에 동의해주세요"
-              : "서비스 이용을 위해 약관에 동의해주세요"
-            }
-          </CardDescription>
+          <CardTitle className="text-2xl">{title}</CardTitle>
+          <CardDescription>{description}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-6">
@@ -226,7 +147,7 @@ export function TermsAgreementForm({
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Label htmlFor="copyright" className="text-sm font-medium">
-                  3. 창작 또는 공유 가능한 목소리만 업로드합니다. <span className="text-red-500">(필수)</span>
+                  3. 창작 또는 공유 가능한 목소리만 업로드한다는 약관에 동의합니다. <span className="text-red-500">(필수)</span>
                 </Label>
                 <Checkbox
                   id="copyright"
@@ -237,21 +158,29 @@ export function TermsAgreementForm({
               <div className="max-h-40 overflow-y-auto rounded-md border p-3 text-sm text-muted-foreground">
                 <h4 className="font-medium mb-2">창작 또는 공유 가능한 목소리만 업로드</h4>
                 <p className="text-xs leading-relaxed">
-                  본 서비스는 누구나 음성을 업로드하고 생성 결과를 확인할 수 있는 열린 플랫폼입니다.<br/>
-                  이에 따라 사용자는 다음 사항에 동의합니다:<br/><br/>
-                  • 본인의 음성 또는 타인의 음성을 동의 하에 업로드해야 하며,<br/>
-                  • 방송인, 연예인 등 제3자의 퍼블리시티권이 침해되지 않도록 주의해야 합니다.<br/>
-                  • 저작권·초상권·퍼블리시티권을 포함한 타인의 권리를 침해한 경우, 모든 민·형사상 책임은 사용자에게 있으며, 회사는 이에 대한 책임을 지지 않습니다.<br/><br/>
-                  타인의 권리가 침해되었다는 신고가 접수된 경우, 회사는 사전 고지 없이 해당 콘텐츠를 삭제하거나 이용을 제한할 수 있습니다.
+                  본 서비스는 사용자가 업로드한 음성을 기반으로 AI 음성 합성 기능을 제공합니다.<br/>
+                  이 과정에서 업로드되는 음성은 다음과 같은 조건을 충족해야 합니다:<br/><br/>
+                  <strong>허용되는 음성:</strong><br/>
+                  • 본인이 직접 녹음한 음성<br/>
+                  • 본인이 창작한 콘텐츠의 음성<br/>
+                  • 공유 및 상업적 이용이 가능한 음성<br/>
+                  • 저작권이 본인에게 있거나 적법한 권한이 있는 음성<br/><br/>
+                  <strong>금지되는 음성:</strong><br/>
+                  • 제3자의 음성 (동의 없이)<br/>
+                  • 저작권이 있는 음성 (권한 없이)<br/>
+                  • 상업적 이용이 제한된 음성<br/>
+                  • 불법적이거나 부적절한 콘텐츠의 음성<br/><br/>
+                  사용자는 업로드하는 음성에 대한 모든 권한과 책임을 가집니다.<br/>
+                  권리 침해가 발견될 경우, 해당 콘텐츠는 즉시 삭제되며 관련 법적 조치가 취해질 수 있습니다.
                 </p>
               </div>
             </div>
 
-            {/* 4. AI 학습 활용 (선택사항) */}
+            {/* 4. AI 생성 콘텐츠 이용 */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Label htmlFor="ai" className="text-sm font-medium">
-                  4. 업로드한 음성/텍스트가 AI 학습에 활용될 수 있음에 동의합니다. <span className="text-gray-500">(선택)</span>
+                  4. AI 생성 콘텐츠 이용에 동의합니다. <span className="text-gray-500">(선택)</span>
                 </Label>
                 <Checkbox
                   id="ai"
@@ -260,15 +189,22 @@ export function TermsAgreementForm({
                 />
               </div>
               <div className="max-h-40 overflow-y-auto rounded-md border p-3 text-sm text-muted-foreground">
-                <h4 className="font-medium mb-2">AI 학습 활용 동의</h4>
+                <h4 className="font-medium mb-2">AI 생성 콘텐츠 이용</h4>
                 <p className="text-xs leading-relaxed">
-                  사용자가 제공한 음성 및 입력한 텍스트는 당사의 AI 모델 품질 개선을 위한 학습 데이터로 활용될 수 있습니다.<br/>
-                  단, 본 활용은 사용자의 선택 동의가 있는 경우에만 이루어지며, 다음과 같은 조건을 따릅니다:<br/><br/>
-                  • 수집 항목: 업로드된 음성 파일, 입력된 텍스트 문장<br/>
-                  • 활용 목적: AI 모델의 음성 합성 품질 개선 및 연구<br/>
-                  • 활용 방식: 비식별화된 데이터로 가공하여 내부 학습에만 사용<br/>
-                  • 보유 기간: 활용 목적 달성 시까지, 또는 사용자의 삭제 요청 시<br/><br/>
-                  동의하지 않아도 서비스 이용에는 전혀 제한이 없습니다.
+                  본 서비스는 AI 기술을 활용하여 사용자가 업로드한 음성을 기반으로 새로운 음성 콘텐츠를 생성합니다.<br/>
+                  이 과정에서 생성되는 AI 콘텐츠에 대한 이용 조건은 다음과 같습니다:<br/><br/>
+                  <strong>AI 생성 콘텐츠의 특성:</strong><br/>
+                  • 업로드된 음성을 학습하여 유사한 음성으로 새로운 콘텐츠를 생성<br/>
+                  • 원본 음성과는 다른 새로운 콘텐츠로 간주<br/>
+                  • 사용자가 직접 입력한 텍스트를 음성으로 변환<br/><br/>
+                  <strong>이용 권한:</strong><br/>
+                  • 생성된 AI 콘텐츠는 사용자가 자유롭게 이용 가능<br/>
+                  • 상업적 이용, 공유, 배포 등 모든 용도로 사용 가능<br/>
+                  • 단, 원본 음성의 저작권은 별도로 보호됨<br/><br/>
+                  <strong>주의사항:</strong><br/>
+                  • AI 생성 콘텐츠는 원본 음성과 유사할 수 있으나, 완전히 동일하지는 않음<br/>
+                  • 생성된 콘텐츠의 품질은 입력된 텍스트와 원본 음성의 품질에 따라 달라질 수 있음<br/>
+                  • AI 기술의 한계로 인해 완벽한 음성 합성이 보장되지 않을 수 있음
                 </p>
               </div>
             </div>
@@ -300,32 +236,21 @@ export function TermsAgreementForm({
               </Button>
             </div>
 
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {/* 에러 메시지 */}
+            {error && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+              </div>
+            )}
 
-            <div className="flex gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleBack}
-                className="flex-1"
-              >
-                {signupType === "email" ? "이전" : "취소"}
-              </Button>
-              <Button
-                type="button"
-                onClick={handleContinue}
-                className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
-                disabled={isLoading}
-              >
-                {isLoading ? "처리 중..." : (signupType === "email" ? "다음" : "동의 완료")}
-              </Button>
-            </div>
-
-            <div className="text-center text-sm text-muted-foreground">
-              <p>
-                약관에 동의하지 않으시면 서비스를 이용할 수 없습니다.
-              </p>
-            </div>
+            {/* 동의 완료 버튼 */}
+            <Button
+              onClick={handleContinue}
+              disabled={isLoading || !agreedToTerms || !agreedToVoice || !agreedToCopyright}
+              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
+            >
+              {isLoading ? "처리 중..." : "동의 완료"}
+            </Button>
           </div>
         </CardContent>
       </Card>

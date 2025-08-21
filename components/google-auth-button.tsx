@@ -10,6 +10,16 @@ export function GoogleAuthButton() {
   const searchParams = useSearchParams();
 
   const handleSignIn = async () => {
+    // 이메일 회원가입 관련 sessionStorage 정리
+    sessionStorage.removeItem("tempSignupType");
+    sessionStorage.removeItem("tempSignupEmail");
+    sessionStorage.removeItem("tempSignupPassword");
+    sessionStorage.removeItem("tempSignupRepeatPassword");
+    sessionStorage.removeItem("tempAgreedToTerms");
+    sessionStorage.removeItem("tempAgreedToVoice");
+    sessionStorage.removeItem("tempAgreedToCopyright");
+    sessionStorage.removeItem("tempAgreedToAI");
+    
     // redirectTo 쿼리 파라미터 확인
     const redirectTo = searchParams.get('redirectTo');
     
@@ -25,7 +35,6 @@ export function GoogleAuthButton() {
       provider: 'google',
       options: {
         redirectTo: callbackUrl,
-        // 약관 동의 정보는 전달하지 않음 - 콜백에서 약관 동의 페이지로 리다이렉트
       },
     });
   };

@@ -71,7 +71,7 @@ function EmailConfirmedContent() {
           }
         }
         
-        // 약관 동의 여부 확인
+        // 약관 동의 여부 확인 (user_metadata에서 확인)
         const termsAgreed = user.user_metadata?.terms_agreed === true || 
                            user.user_metadata?.terms_agreed === 'true' || 
                            user.user_metadata?.terms_agreed === '1';
@@ -81,6 +81,9 @@ function EmailConfirmedContent() {
         const copyrightAgreed = user.user_metadata?.copyright_agreed === true || 
                                user.user_metadata?.copyright_agreed === 'true' || 
                                user.user_metadata?.copyright_agreed === '1';
+        const aiAgreed = user.user_metadata?.ai_agreed === true || 
+                        user.user_metadata?.ai_agreed === 'true' || 
+                        user.user_metadata?.ai_agreed === '1';
         
         // 이메일 인증이 완료되고 약관 동의가 완료된 경우 public 테이블 생성
         if (user.email_confirmed_at && termsAgreed && voiceAgreed && copyrightAgreed) {
@@ -150,9 +153,7 @@ function EmailConfirmedContent() {
                   terms_agreed: termsAgreed,
                   voice_agreed: voiceAgreed,
                   copyright_agreed: copyrightAgreed,
-                  ai_agreed: user.user_metadata?.ai_agreed === true || 
-                            user.user_metadata?.ai_agreed === 'true' || 
-                            user.user_metadata?.ai_agreed === '1'
+                  ai_agreed: aiAgreed
                 }
               }, { onConflict: 'account_id' });
             
@@ -166,9 +167,7 @@ function EmailConfirmedContent() {
                 terms_agreed: true,
                 voice_agreed: true,
                 copyright_agreed: true,
-                ai_agreed: user.user_metadata?.ai_agreed === true || 
-                          user.user_metadata?.ai_agreed === 'true' || 
-                          user.user_metadata?.ai_agreed === '1'
+                ai_agreed: aiAgreed
               }
             });
             
@@ -192,7 +191,7 @@ function EmailConfirmedContent() {
           setIsProcessing(false);
           return;
         } else {
-          setError('약관 동의가 완료되지 않았습니다.');
+          setError('약관 동의가 완료되지 않았습니다. 회원가입을 다시 진행해주세요.');
           setIsProcessing(false);
           return;
         }
@@ -205,6 +204,7 @@ function EmailConfirmedContent() {
             if (prev <= 1) {
               setIsRedirecting(true);
               setTimeout(() => {
+                // 페이지 새로고침하여 상단바 상태 즉시 반영
                 window.location.href = "/";
               }, 0);
               return 0;
@@ -226,6 +226,7 @@ function EmailConfirmedContent() {
 
   const handleManualRedirect = () => {
     setIsRedirecting(true);
+    // 페이지 새로고침하여 상단바 상태 즉시 반영
     window.location.href = "/";
   };
 

@@ -1,7 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasEnvVars } from "../utils";
-import { type User } from "@supabase/supabase-js";
 
 // 허용된 라우트 목록 (인증이 필요하지 않은 페이지들)
 // 
@@ -22,9 +21,6 @@ const ALLOWED_ROUTES = [
   '/demo',                // 데모 페이지들 (오디오 플레이어 데모)
   '/tts-result'           // TTS 결과 페이지들 (공개 결과 보기)
 ];
-
-// 약관 동의 상태 캐시 (성능 향상을 위해)
-const VERIFICATION_CACHE = new Map<string, boolean>();
 
 // 라우트가 허용되는지 확인하는 함수
 const isAllowedRoute = (pathname: string): boolean => {
@@ -48,42 +44,6 @@ const isAllowedRoute = (pathname: string): boolean => {
   
   return allowed;
 };
-
-// 약관 동의 상태 캐시 무효화 함수
-export const invalidateVerificationCache = (userId: string) => {
-  VERIFICATION_CACHE.delete(userId);
-};
-
-// Verified User 판별 함수 (캐싱 적용)
-function isVerifiedUser(user: User | null): boolean {
-  if (!user) {
-    return false;
-  }
-  
-  // 캐시된 결과가 있으면 반환
-  const userId = user.id;
-  if (VERIFICATION_CACHE.has(userId)) {
-    return VERIFICATION_CACHE.get(userId)!;
-  }
-  
-  // 필수 약관 3개 모두 동의했는지 확인
-  const termsAgreed = user.user_metadata?.terms_agreed === true || 
-                     user.user_metadata?.terms_agreed === 'true' || 
-                     user.user_metadata?.terms_agreed === '1';
-  const voiceAgreed = user.user_metadata?.voice_agreed === true || 
-                     user.user_metadata?.voice_agreed === 'true' || 
-                     user.user_metadata?.voice_agreed === '1';
-  const copyrightAgreed = user.user_metadata?.copyright_agreed === true || 
-                         user.user_metadata?.copyright_agreed === 'true' || 
-                         user.user_metadata?.copyright_agreed === '1';
-  
-  const isVerified = termsAgreed && voiceAgreed && copyrightAgreed;
-  
-  // 결과를 캐시에 저장
-  VERIFICATION_CACHE.set(userId, isVerified);
-  
-  return isVerified;
-}
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -146,30 +106,9 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // 로그인한 사용자 처리
-  if (user) {
-    const isVerified = isVerifiedUser(user);
-    const isTermsPage = request.nextUrl.pathname.startsWith("/auth/terms");
-    
-    // 약관 동의하지 않은 사용자 처리
-    if (!isVerified) {
-      // 허용된 라우트가 아닌 곳으로 이동하려고 하면 약관 동의 페이지로 리다이렉트
-      if (!isAllowedRoute(request.nextUrl.pathname)) {
-        // 약관 동의 페이지로 리다이렉트
-        const url = request.nextUrl.clone();
-        url.pathname = "/auth/terms";
-        return NextResponse.redirect(url);
-      }
-    } else {
-      // 약관 동의 완료한 사용자가 약관 페이지에 있으면 홈으로 리다이렉트
-      if (isTermsPage) {
-        const url = request.nextUrl.clone();
-        url.pathname = "/";
-        return NextResponse.redirect(url);
-      }
-    }
-  }
-  
+  // 로그인한 사용자는 모든 라우트 접근 허용
+  // 약관 체크는 각 보호된 페이지에서 SSR로 처리
+
   // IMPORTANT: You *must* return the supabaseResponse object as it is.
   // If you're creating a new response object with NextResponse.next() make sure to:
   // 1. Pass the request in it, like so:
