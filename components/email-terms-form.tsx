@@ -19,22 +19,9 @@ export function EmailTermsForm() {
       sessionStorage.setItem("tempAgreedToCopyright", "true");
       sessionStorage.setItem("tempAgreedToAI", termsData.ai_agreed.toString());
       
-      // user_metadata에도 약관 동의 정보 저장 (이메일 인증 완료 후 사용)
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      
-      const { error } = await supabase.auth.updateUser({
-        data: {
-          terms_agreed: termsData.terms_agreed,
-          voice_agreed: termsData.voice_agreed,
-          copyright_agreed: termsData.copyright_agreed,
-          ai_agreed: termsData.ai_agreed
-        }
-      });
-      
-      if (error) {
-        console.error('약관 동의 정보 저장 오류:', error);
-      }
+      // 이메일 회원가입 과정에서는 아직 로그인하지 않은 상태이므로
+      // updateUser 호출을 제거하고 sessionStorage만 사용
+      // 실제 약관 동의 정보는 회원가입 시 user_metadata에 저장됨
       
       // 회원가입 페이지로 이동
       router.push("/auth/sign-up");
