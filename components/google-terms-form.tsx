@@ -7,6 +7,7 @@ import { useState } from "react";
 export function GoogleTermsForm() {
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleTermsComplete = async (termsData: {
     terms_agreed: boolean;
@@ -14,6 +15,11 @@ export function GoogleTermsForm() {
     copyright_agreed: boolean;
     ai_agreed: boolean;
   }) => {
+    if (isSubmitting) return; // 중복 제출 방지
+    
+    setIsSubmitting(true);
+    setError(null);
+
     try {
       // API 호출로 약관 동의 완료
       const formData = new FormData();
@@ -27,10 +33,17 @@ export function GoogleTermsForm() {
         formData.append('redirectTo', redirectTo);
       }
 
+      // 최적화: 타임아웃 설정으로 무한 대기 방지
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10초 타임아웃
+
       const response = await fetch('/api/terms/complete', {
         method: 'POST',
         body: formData,
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (response.redirected) {
         window.location.href = response.url;
@@ -40,8 +53,14 @@ export function GoogleTermsForm() {
           setError(result.error || "약관 동의 처리에 실패했습니다.");
         }
       }
-    } catch {
-      setError("약관 동의 처리 중 오류가 발생했습니다.");
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        setError("요청 시간이 초과되었습니다. 다시 시도해주세요.");
+      } else {
+        setError("약관 동의 처리 중 오류가 발생했습니다.");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

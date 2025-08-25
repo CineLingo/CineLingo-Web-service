@@ -59,52 +59,59 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // 데이터베이스 함수 호출
-    const { data, error } = await supabase.rpc('complete_terms_agreement', {
-      user_uuid: user.id,
-      terms_agreed,
-      voice_agreed,
-      copyright_agreed,
-      ai_agreed
-    });
-
-    if (error) {
-      console.error('약관 동의 완료 오류:', error);
-      return NextResponse.json(
-        { error: "약관 동의 처리 중 오류가 발생했습니다: " + error.message },
-        { status: 500 }
-      );
-    }
-
-    // 결과 확인
-    if (data && data.success) {
-      // 사용자 메타데이터 즉시 업데이트
-      const { error: updateError } = await supabase.auth.updateUser({
+    // 최적화: 병렬 처리로 성능 개선
+    const [dbResult, metadataResult] = await Promise.allSettled([
+      // 1. 데이터베이스 함수 호출
+      supabase.rpc('complete_terms_agreement', {
+        user_uuid: user.id,
+        terms_agreed,
+        voice_agreed,
+        copyright_agreed,
+        ai_agreed
+      }),
+      
+      // 2. 사용자 메타데이터 업데이트 (병렬로 실행)
+      supabase.auth.updateUser({
         data: {
           terms_agreed: terms_agreed,
           voice_agreed: voice_agreed,
           copyright_agreed: copyright_agreed,
           ai_agreed: ai_agreed
         }
+      })
+    ]);
+
+    // DB 결과 확인
+    if (dbResult.status === 'rejected' || dbResult.value.error) {
+      const error = dbResult.status === 'rejected' ? dbResult.reason : dbResult.value.error;
+      console.error('약관 동의 완료 오류:', error);
+      return NextResponse.json(
+        { error: "약관 동의 처리 중 오류가 발생했습니다: " + (error?.message || error) },
+        { status: 500 }
+      );
+    }
+
+    const { data } = dbResult.value;
+    
+    // 결과 확인
+    if (data && data.success) {
+      // 메타데이터 업데이트 결과 로깅 (실패해도 약관 동의는 성공으로 처리)
+      if (metadataResult.status === 'rejected' || metadataResult.value.error) {
+        console.warn('사용자 메타데이터 업데이트 실패 (약관 동의는 성공):', 
+          metadataResult.status === 'rejected' ? metadataResult.reason : metadataResult.value.error);
+      }
+
+      // 세션 갱신 (백그라운드에서 실행, 실패해도 리다이렉트 진행)
+      supabase.auth.refreshSession().catch(error => {
+        console.warn('서버 세션 갱신 실패 (약관 동의는 성공):', error);
       });
-
-      if (updateError) {
-        console.error('사용자 메타데이터 업데이트 오류:', updateError);
-        // 메타데이터 업데이트 실패해도 약관 동의는 성공으로 처리
-      }
-
-      // 서버에서 세션 갱신
-      const { error: refreshError } = await supabase.auth.refreshSession();
-      if (refreshError) {
-        console.error('서버 세션 갱신 오류:', refreshError);
-      }
 
       // 리다이렉트할 URL 결정
       if (!redirectTo) {
         redirectTo = '/upload';
       }
       
-      // 303 리다이렉트로 응답 (서버에서 세션 갱신 후)
+      // 즉시 리다이렉트 (세션 갱신 대기하지 않음)
       const redirectUrl = new URL(redirectTo, request.url);
       return NextResponse.redirect(redirectUrl, 303);
     } else {

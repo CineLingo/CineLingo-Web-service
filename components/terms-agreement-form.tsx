@@ -43,6 +43,8 @@ export function TermsAgreementForm({
 
   // prop으로 받은 error와 local error를 결합
   const error = propError || localError;
+  // prop으로 받은 isLoading과 local isLoading을 결합
+  const isSubmitting = isLoading;
 
   const handleContinue = async () => {
     if (!agreedToTerms) {
@@ -96,6 +98,7 @@ export function TermsAgreementForm({
                   id="terms"
                   checked={agreedToTerms}
                   onCheckedChange={(checked) => setAgreedToTerms(checked as boolean)}
+                  disabled={isSubmitting}
                 />
               </div>
               <div className="max-h-40 overflow-y-auto rounded-md border p-3 text-sm text-muted-foreground">
@@ -124,6 +127,7 @@ export function TermsAgreementForm({
                   id="voice"
                   checked={agreedToVoice}
                   onCheckedChange={(checked) => setAgreedToVoice(checked as boolean)}
+                  disabled={isSubmitting}
                 />
               </div>
               <div className="max-h-40 overflow-y-auto rounded-md border p-3 text-sm text-muted-foreground">
@@ -153,6 +157,7 @@ export function TermsAgreementForm({
                   id="copyright"
                   checked={agreedToCopyright}
                   onCheckedChange={(checked) => setAgreedToCopyright(checked as boolean)}
+                  disabled={isSubmitting}
                 />
               </div>
               <div className="max-h-40 overflow-y-auto rounded-md border p-3 text-sm text-muted-foreground">
@@ -186,6 +191,7 @@ export function TermsAgreementForm({
                   id="ai"
                   checked={agreedToAI}
                   onCheckedChange={(checked) => setAgreedToAI(checked as boolean)}
+                  disabled={isSubmitting}
                 />
               </div>
               <div className="max-h-40 overflow-y-auto rounded-md border p-3 text-sm text-muted-foreground">
@@ -231,6 +237,7 @@ export function TermsAgreementForm({
                   }
                 }}
                 className="w-full border-blue-200 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 text-blue-700 dark:text-blue-300 dark:border-blue-700 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 transition-all duration-300"
+                disabled={isSubmitting}
               >
                 {agreedToTerms && agreedToVoice && agreedToCopyright && agreedToAI ? "모두 취소하기" : "모두 동의하기"}
               </Button>
@@ -246,10 +253,10 @@ export function TermsAgreementForm({
             {/* 동의 완료 버튼 */}
             <Button
               onClick={handleContinue}
-              disabled={isLoading || !agreedToTerms || !agreedToVoice || !agreedToCopyright}
+              disabled={isSubmitting || !agreedToTerms || !agreedToVoice || !agreedToCopyright}
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
             >
-              {isLoading ? "처리 중..." : "동의 완료"}
+              {isSubmitting ? "처리 중..." : "동의 완료"}
             </Button>
           </div>
         </CardContent>
