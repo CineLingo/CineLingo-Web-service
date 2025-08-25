@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { checkUserTermsFromMetadata } from "@/lib/terms";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -26,48 +27,12 @@ export async function GET(request: Request) {
                              (!user.app_metadata?.provider && user.email_confirmed_at);
         
         if (isGoogleOAuth) {
-          // 구글 OAuth의 경우: user_metadata에서 약관 동의 정보 확인
-          const hasTermsInMetadata = user.user_metadata?.terms_agreed === true ||
-                                   user.user_metadata?.terms_agreed === 'true' ||
-                                   user.user_metadata?.terms_agreed === '1';
+          // 구글 OAuth의 경우: user_metadata에서 약관 동의 정보 확인 (3개 약관 모두 확인)
+          const hasTermsInMetadata = checkUserTermsFromMetadata(user);
           
           if (hasTermsInMetadata) {
-            // 최적화: JOIN 쿼리로 단일 DB 호출로 약관 동의 확인
-            const { data: termsData, error: termsError } = await supabase
-              .from('user_to_account_mapping')
-              .select(`
-                account_id,
-                terms_agreement!inner(
-                  agreed,
-                  critical_keys
-                )
-              `)
-              .eq('user_id', user.id)
-              .single();
-
-            if (termsError || !termsData) {
-              // 계정 매핑이나 약관 동의 정보가 없으면 약관 동의 페이지로 리다이렉트
-              return NextResponse.redirect(`${origin}/auth/terms/google`);
-            }
-
-            // 약관 동의 여부 확인 (단일 쿼리 결과에서)
-            const { terms_agreement } = termsData;
-            const termsInfo = Array.isArray(terms_agreement) ? terms_agreement[0] : terms_agreement;
-            
-            const hasAgreedToTerms = termsInfo && 
-              termsInfo.agreed && 
-              termsInfo.critical_keys &&
-              termsInfo.critical_keys.terms_agreed && 
-              termsInfo.critical_keys.voice_agreed && 
-              termsInfo.critical_keys.copyright_agreed;
-            
-            if (hasAgreedToTerms) {
-              // 이미 약관 동의를 완료한 사용자인 경우
-              return NextResponse.redirect(`${origin}${next}`);
-            } else {
-              // 약관 동의를 완료하지 않은 경우 약관 동의 페이지로 리다이렉트
-              return NextResponse.redirect(`${origin}/auth/terms/google`);
-            }
+            // user_metadata에 약관 동의 정보가 있으면 DB 확인 생략하고 바로 성공 처리
+            return NextResponse.redirect(`${origin}${next}`);
           } else {
             // 약관 동의 정보가 없으면 약관 동의 페이지로 리다이렉트
             return NextResponse.redirect(`${origin}/auth/terms/google`);
