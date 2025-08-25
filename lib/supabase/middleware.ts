@@ -22,6 +22,14 @@ const ALLOWED_ROUTES = [
   '/tts-result'           // TTS 결과 페이지들 (공개 결과 보기)
 ];
 
+// 로그인된 사용자가 접근 시 홈페이지로 리다이렉트할 라우트들
+const AUTH_REDIRECT_ROUTES = [
+  '/auth/forgot-password',
+  '/auth/update-password',
+  '/auth/terms/email-signup',
+  '/auth/terms/google'
+];
+
 // 라우트가 허용되는지 확인하는 함수
 const isAllowedRoute = (pathname: string): boolean => {
   const allowed = ALLOWED_ROUTES.some(route => {
@@ -103,6 +111,13 @@ export async function updateSession(request: NextRequest) {
     url.pathname = "/auth/login";
     // 원래 가려던 페이지 정보를 쿼리 파라미터로 전달
     url.searchParams.set('redirectTo', request.nextUrl.pathname);
+    return NextResponse.redirect(url);
+  }
+
+  // 로그인된 사용자의 인증 페이지 접근 시 홈페이지로 리다이렉트
+  if (user && AUTH_REDIRECT_ROUTES.includes(request.nextUrl.pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
     return NextResponse.redirect(url);
   }
 

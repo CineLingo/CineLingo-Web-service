@@ -1,11 +1,12 @@
 "use client";
 
 import { TermsAgreementForm } from "./terms-agreement-form";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useState } from "react";
 
 export function GoogleTermsForm() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
   const handleTermsComplete = async (termsData: {

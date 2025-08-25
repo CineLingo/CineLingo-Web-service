@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,20 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
+
+  // 로그인된 사용자가 접근했을 때 자동으로 로그아웃 처리
+  useEffect(() => {
+    const checkAndLogout = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.auth.signOut();
+        // 페이지 새로고침하여 상태 업데이트
+        window.location.reload();
+      }
+    };
+    
+    checkAndLogout();
+  }, [supabase.auth]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

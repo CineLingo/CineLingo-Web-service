@@ -43,8 +43,8 @@ export default function HomeButton({
     sessionStorage.removeItem("tempAgreedToCopyright");
     sessionStorage.removeItem("tempAgreedToAI");
     
-    // auth/terms 페이지에서 홈 버튼을 클릭할 때 로그아웃 후 홈으로 이동
-    if (pathname.startsWith("/auth/terms")) {
+    // auth 페이지에서 홈 버튼을 클릭할 때 로그아웃 후 홈으로 이동
+    if (pathname.startsWith("/auth/")) {
       e.preventDefault();
       const supabase = createClient();
       await supabase.auth.signOut();
