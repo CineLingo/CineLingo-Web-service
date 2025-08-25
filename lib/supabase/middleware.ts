@@ -26,8 +26,7 @@ const ALLOWED_ROUTES = [
 const AUTH_REDIRECT_ROUTES = [
   '/auth/forgot-password',
   '/auth/update-password',
-  '/auth/terms/email-signup',
-  '/auth/terms/google'
+  '/auth/terms/email-signup'
 ];
 
 // 라우트가 허용되는지 확인하는 함수
