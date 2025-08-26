@@ -1058,7 +1058,7 @@ const FileUploadDemo = () => {
 
           {/* Step 1: 업로드/녹음 */}
           {currentStep === 'upload' && (
-            <div className="space-y-4 sm:space-y-6">
+            <div className="space-y-4 sm:space-y-6 pb-16">
               {/* 1. 녹음하기 */}
               <div className="text-center">
                 {!isRecording ? (
