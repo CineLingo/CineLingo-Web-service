@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
 
       // 리다이렉트할 URL 결정
       if (!redirectTo) {
-        redirectTo = '/upload';
+        redirectTo = '/';
       }
       
       // 즉시 리다이렉트 (세션 갱신 대기하지 않음)
