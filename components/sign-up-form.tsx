@@ -29,20 +29,7 @@ export function SignUpForm({
   const router = useRouter();
   // const searchParams = useSearchParams();
 
-  // 로그인된 사용자가 접근했을 때 자동으로 로그아웃 처리
-  useEffect(() => {
-    const checkAndLogout = async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.auth.signOut();
-        // 페이지 새로고침하여 상태 업데이트
-        window.location.reload();
-      }
-    };
-    
-    checkAndLogout();
-  }, []);
+  // 자동 로그아웃 제거: 로그인 상태 보호는 서버 미들웨어에서 처리
 
   // 세션스토리지에서 약관 동의 데이터 확인
   const [agreedToTerms, setAgreedToTerms] = useState(false);

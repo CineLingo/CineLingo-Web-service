@@ -24,6 +24,8 @@ const ALLOWED_ROUTES = [
 
 // 로그인된 사용자가 접근 시 홈페이지로 리다이렉트할 라우트들
 const AUTH_REDIRECT_ROUTES = [
+  '/auth/login',
+  '/auth/sign-up',
   '/auth/forgot-password',
   '/auth/update-password',
   '/auth/terms/email-signup'
