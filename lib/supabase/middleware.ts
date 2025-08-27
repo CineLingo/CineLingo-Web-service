@@ -27,7 +27,6 @@ const AUTH_REDIRECT_ROUTES = [
   '/auth/login',
   '/auth/sign-up',
   '/auth/forgot-password',
-  '/auth/update-password',
   '/auth/terms/email-signup'
 ];
 

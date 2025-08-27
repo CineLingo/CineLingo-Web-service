@@ -33,7 +33,7 @@ export function ForgotPasswordForm({
     try {
       // 현재 도메인을 기반으로 리다이렉트 URL 생성
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-      const redirectUrl = `${baseUrl}/auth/update-password`;
+      const redirectUrl = `${baseUrl}/auth/confirm`;
         
       // The url which will be included in the email. This URL needs to be configured in your redirect URLs in the Supabase dashboard at https://supabase.com/dashboard/project/_/auth/url-configuration
       const { error } = await supabase.auth.resetPasswordForEmail(email, {

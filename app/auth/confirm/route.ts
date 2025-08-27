@@ -5,10 +5,26 @@ import { type NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
+  const code = searchParams.get("code");
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
   // const next = searchParams.get("next") ?? "/";
 
+  // 1) 코드 교환 플로우 지원 (Supabase가 code 파라미터를 보내는 경우)
+  if (code) {
+    const supabase = await createClient();
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error) {
+      // 비밀번호 복구 링크를 통해 들어온 경우, 세션 교환 후 재설정 페이지로 이동
+      // 복구가 아닌 일반 이메일 인증 코드일 수도 있으나, code 플로우에서는 타입 정보가 없으므로
+      // 복구 플로우를 우선 지원하고, 이메일 인증은 기존 token_hash 플로우로 처리합니다.
+      redirect('/auth/update-password');
+    } else {
+      redirect(`/auth/error?error=코드 교환에 실패했습니다: ${error.message}`);
+    }
+  }
+
+  // 2) token_hash + type 기반의 전통적인 OTP 검증 플로우
   if (token_hash && type) {
     const supabase = await createClient();
 
@@ -18,11 +34,16 @@ export async function GET(request: NextRequest) {
     });
     
     if (!error) {
-      // 이메일 인증 완료 후 사용자 정보 가져오기
+      // 이메일 인증/복구 완료 후 사용자 정보 가져오기
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (user) {
-        // email_verified를 true로 업데이트
+        // 비밀번호 복구 링크인 경우: 비밀번호 재설정 페이지로 이동
+        if (type === 'recovery') {
+          redirect('/auth/update-password');
+        }
+
+        // 이메일 인증의 경우: email_verified 플래그를 true로 업데이트 후 안내 페이지로 이동
         const { error: updateError } = await supabase.auth.updateUser({
           data: {
             email_verified: true
@@ -33,18 +54,6 @@ export async function GET(request: NextRequest) {
           console.error('이메일 인증 상태 업데이트 오류:', updateError);
         }
 
-        // 약관 동의 여부 확인 (사용하지 않는 변수 주석 처리)
-        // const termsAgreed = user.user_metadata?.terms_agreed === true || 
-        //                    user.user_metadata?.terms_agreed === 'true' || 
-        //                    user.user_metadata?.terms_agreed === '1';
-        // const voiceAgreed = user.user_metadata?.voice_agreed === true || 
-        //                    user.user_metadata?.voice_agreed === 'true' || 
-        //                    user.user_metadata?.voice_agreed === '1';
-        // const copyrightAgreed = user.user_metadata?.copyright_agreed === true || 
-        //                        user.user_metadata?.copyright_agreed === 'true' || 
-        //                        user.user_metadata?.copyright_agreed === '1';
-        
-        // 이메일 인증 완료 페이지로 리다이렉트 (public 테이블 생성은 email-confirmed 페이지에서 처리)
         redirect('/auth/email-confirmed');
       } else {
         redirect(`/auth/error?error=사용자 정보를 찾을 수 없습니다`);
