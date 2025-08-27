@@ -47,6 +47,9 @@ export function TermsAgreementForm({
   const isSubmitting = isLoading;
 
   const handleContinue = async () => {
+    if (isSubmitting) {
+      return;
+    }
     if (!agreedToTerms) {
       setLocalError("이용약관 및 개인정보 수집·이용에 동의해주세요.");
       return;
@@ -65,7 +68,7 @@ export function TermsAgreementForm({
     setIsLoading(true);
 
     try {
-      onComplete({
+      await onComplete({
         terms_agreed: agreedToTerms,
         voice_agreed: agreedToVoice,
         copyright_agreed: agreedToCopyright,

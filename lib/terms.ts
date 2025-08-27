@@ -128,7 +128,7 @@ export async function checkUserTermsFromDB(userId: string): Promise<{
   
   const isGoogleOAuth = user.app_metadata?.provider === 'google';
   
-  // JOIN을 사용한 단일 쿼리로 약관 동의 확인
+  // JOIN을 사용하되 다중 매핑에도 안전하게 처리
   const { data, error } = await supabase
     .from('user_to_account_mapping')
     .select(`
@@ -139,13 +139,19 @@ export async function checkUserTermsFromDB(userId: string): Promise<{
       )
     `)
     .eq('user_id', userId)
-    .single();
+    .limit(1);
   
-  if (error || !data) {
+  if (error || !data || data.length === 0) {
     return { hasTerms: false, isGoogleOAuth };
   }
   
-  const { terms_agreement } = data;
+  type TermsAgreementRow = {
+    terms_agreement:
+      | { agreed: boolean; critical_keys: { terms_agreed?: boolean; voice_agreed?: boolean; copyright_agreed?: boolean } }[]
+      | { agreed: boolean; critical_keys: { terms_agreed?: boolean; voice_agreed?: boolean; copyright_agreed?: boolean } };
+  };
+  const row = (Array.isArray(data) ? data[0] : data) as TermsAgreementRow;
+  const { terms_agreement } = row;
   // terms_agreement는 배열이므로 첫 번째 요소 사용
   const termsData = Array.isArray(terms_agreement) ? terms_agreement[0] : terms_agreement;
   const { agreed, critical_keys } = termsData;

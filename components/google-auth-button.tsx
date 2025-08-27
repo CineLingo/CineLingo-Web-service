@@ -42,7 +42,7 @@ export function GoogleAuthButton() {
           redirectTo: callbackUrl,
         },
       });
-    } catch (error) {
+    } catch {
       // 실패 시 다시 클릭 가능하도록 복구
       setIsLoading(false);
     }

@@ -106,13 +106,17 @@ export async function POST(request: NextRequest) {
         console.warn('서버 세션 갱신 실패 (약관 동의는 성공):', error);
       });
 
-      // 리다이렉트할 URL 결정
-      if (!redirectTo) {
+      // 리다이렉트할 URL 결정 (내부 경로 화이트리스트)
+      if (!redirectTo || typeof redirectTo !== 'string') {
         redirectTo = '/';
       }
-      
+
+      // 내부 경로(`/`로 시작)만 허용. 그 외는 루트로 대체
+      const isInternalPath = redirectTo.startsWith('/');
+      const safePath = isInternalPath ? redirectTo : '/';
+
       // 즉시 리다이렉트 (세션 갱신 대기하지 않음)
-      const redirectUrl = new URL(redirectTo, request.url);
+      const redirectUrl = new URL(safePath, request.url);
       return NextResponse.redirect(redirectUrl, 303);
     } else {
       return NextResponse.json(

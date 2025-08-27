@@ -41,8 +41,6 @@ export function SignUpForm({
   // 세션스토리지에서 회원가입 데이터 가져오기
   useEffect(() => {
     const storedEmail = sessionStorage.getItem("tempSignupEmail");
-    const storedPassword = sessionStorage.getItem("tempSignupPassword");
-    const storedRepeatPassword = sessionStorage.getItem("tempSignupRepeatPassword");
     // const storedSignupType = sessionStorage.getItem("tempSignupType");
     const storedAgreedToTerms = sessionStorage.getItem("tempAgreedToTerms");
     const storedAgreedToVoice = sessionStorage.getItem("tempAgreedToVoice");
@@ -50,8 +48,6 @@ export function SignUpForm({
     const storedAgreedToAI = sessionStorage.getItem("tempAgreedToAI");
     
     if (storedEmail) setEmail(storedEmail);
-    if (storedPassword) setPassword(storedPassword);
-    if (storedRepeatPassword) setRepeatPassword(storedRepeatPassword);
     // if (storedSignupType) setSignupType(storedSignupType);
     if (storedAgreedToTerms === "true") setAgreedToTerms(true);
     if (storedAgreedToVoice === "true") setAgreedToVoice(true);
@@ -112,8 +108,6 @@ export function SignUpForm({
 
       // 회원가입 성공 시 세션스토리지 정리
       sessionStorage.removeItem("tempSignupEmail");
-      sessionStorage.removeItem("tempSignupPassword");
-      sessionStorage.removeItem("tempSignupRepeatPassword");
       sessionStorage.removeItem("tempSignupType");
       sessionStorage.removeItem("tempAgreedToTerms");
       sessionStorage.removeItem("tempAgreedToVoice");
@@ -132,8 +126,6 @@ export function SignUpForm({
   const handleResetTerms = () => {
     // 현재 입력값 보존 (다시 돌아왔을 때 이어서 입력 가능)
     sessionStorage.setItem("tempSignupEmail", email);
-    sessionStorage.setItem("tempSignupPassword", password);
-    sessionStorage.setItem("tempSignupRepeatPassword", repeatPassword);
     sessionStorage.setItem("tempSignupType", "email");
 
     // 약관 동의 임시 상태 초기화
@@ -186,8 +178,6 @@ export function SignUpForm({
                 onClick={async () => {
                   // 세션스토리지에 데이터 저장
                   sessionStorage.setItem("tempSignupEmail", email);
-                  sessionStorage.setItem("tempSignupPassword", password);
-                  sessionStorage.setItem("tempSignupRepeatPassword", repeatPassword);
                   sessionStorage.setItem("tempSignupType", "email");
                   
                   // 약관 동의 페이지로 이동 (URL 파라미터 없이)
