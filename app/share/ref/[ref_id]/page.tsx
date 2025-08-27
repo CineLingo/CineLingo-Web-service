@@ -6,6 +6,8 @@ import { ArrowLeft, Share2, Plus, Mic, User } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import HomeButton from '@/components/home-button'
+import { Button } from '@/components/ui/button'
+import { NavTheme } from '@/components/nav-theme'
 
 type RefAudioDetail = {
   ref_id: string
@@ -274,6 +276,7 @@ export default function ShareRefPage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
+      <NavTheme theme="upload" />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         <HomeButton variant="floating" />
         
@@ -391,12 +394,12 @@ export default function ShareRefPage() {
               </Link>
             ) : null}
             
-            <Link
-              href="/upload"
-              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-3 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-all duration-300 text-sm font-medium"
+            <Button 
+              asChild 
+              className="flex-1 sm:flex-none h-auto px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-white text-sm sm:text-base font-medium"
             >
-              TTS 생성하기
-            </Link>
+              <Link href="/upload">TTS 생성하기</Link>
+            </Button>
           </div>
         </div>
 

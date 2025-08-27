@@ -15,9 +15,9 @@ html:not(.dark)[data-nav-theme="upload"] .site-navbar {
   background-color: #ffffff;
 }
 
-/* Prevent layout shift when vertical scrollbar appears */
+/* Prevent layout shift when vertical scrollbar appears (reserve gutter only on scrollbar side) */
 html {
-  scrollbar-gutter: stable both-edges;
+  scrollbar-gutter: stable;
 }
 
 @supports not (scrollbar-gutter: stable) {

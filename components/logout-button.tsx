@@ -18,7 +18,7 @@ export function LogoutButton() {
       size="sm"
       className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-white font-medium"
     >
-      Logout
+      로그아웃
     </Button>
   );
 }

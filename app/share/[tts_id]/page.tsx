@@ -6,6 +6,8 @@ import { ArrowLeft, Play, Pause, Volume2, Share2, ExternalLink } from 'lucide-re
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import HomeButton from '@/components/home-button'
+import { Button } from '@/components/ui/button'
+import { NavTheme } from '@/components/nav-theme'
 
 type TTSRequestDetail = {
   request_id: string
@@ -260,6 +262,7 @@ export default function SharePage() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
+      <NavTheme theme="upload" />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         <HomeButton variant="floating" />
         
@@ -378,13 +381,15 @@ export default function SharePage() {
               <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm sm:text-base">
                 나만의 음성으로 TTS를 생성해보세요.
               </p>
-              <Link 
-                href="/upload"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-all duration-300 text-sm sm:text-base font-medium"
+              <Button 
+                asChild 
+                className="h-auto px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-white text-sm sm:text-base font-medium"
               >
-                <ExternalLink size={16} />
-                TTS 시작하기
-              </Link>
+                <Link href="/upload" className="inline-flex items-center justify-center gap-2">
+                  <ExternalLink size={16} />
+                  TTS 시작하기
+                </Link>
+              </Button>
             </div>
           </div>
         </div>

@@ -55,7 +55,7 @@ export function AuthButton() {
         size="sm"
         className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-white font-medium"
       >
-        <Link href="/user/results">MyPage</Link>
+        <Link href="/user/results">마이 페이지</Link>
       </Button>
       <LogoutButton />
     </div>
@@ -66,14 +66,14 @@ export function AuthButton() {
         size="sm"
         className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-white font-medium"
       >
-        <Link href="/auth/login">Sign in</Link>
+        <Link href="/auth/login">로그인</Link>
       </Button>
       <Button 
         asChild 
         size="sm"
         className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-white font-medium"
       >
-        <Link href="/auth/sign-up">Sign up</Link>
+        <Link href="/auth/sign-up">회원가입</Link>
       </Button>
     </div>
   );

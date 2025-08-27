@@ -6,6 +6,7 @@ import { Download, ArrowLeft, Clock, CheckCircle, XCircle, AlertCircle } from 'l
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import HomeButton from '@/components/home-button'
+import { NavTheme } from '@/components/nav-theme'
 import ShareButton from '@/components/ShareButton'
 import ShareRefButton from '@/components/ShareRefButton'
 
@@ -261,9 +262,11 @@ export default function TTSResultDetailPage() {
   )
 
   const statusInfo = getStatusInfo(ttsRequest.status)
+  const refText = ttsRequest.gen_audios?.[0]?.ref_text_while_gen ?? ttsRequest.ref_text_at_request
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
+      <NavTheme theme="upload" />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
         
         {/* 헤더 */}
@@ -392,11 +395,11 @@ export default function TTSResultDetailPage() {
           )}
 
           {/* 참조 음성 텍스트 */}
-          {ttsRequest.ref_text_at_request && (
+          {refText && (
             <div className="px-4 sm:px-6 pb-4 sm:pb-6">
               <div className="bg-gray-50 dark:bg-gray-700 p-3 sm:p-4 rounded-lg">
                 <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 whitespace-pre-wrap leading-relaxed">
-                  {ttsRequest.ref_text_at_request}
+                  {refText}
                 </p>
               </div>
               
