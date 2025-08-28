@@ -13,6 +13,7 @@ type RefAudioDetail = {
   ref_id: string
   user_id: string
   ref_file_url: string
+  ref_file_path?: string
   ref_text?: string
   ref_duration?: number
   created_at: string
@@ -63,6 +64,7 @@ export default function ShareRefPage() {
             ref_id, 
             user_id, 
             ref_file_url, 
+            ref_file_path,
             ref_text, 
             ref_duration, 
             created_at, 
@@ -141,8 +143,15 @@ export default function ShareRefPage() {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`
   }
 
+  // 프리셋 여부 판단 (preset_audio/* 경로)
+  const isPreset = refAudio?.ref_file_path?.toLowerCase().startsWith('preset_audio/') === true
+
   // 공유 기능
   const handleShare = async () => {
+    if (isPreset) {
+      alert('프리셋 참조 음성은 공유할 수 없습니다.')
+      return
+    }
     const shareUrl = `${window.location.origin}/share/ref/${refId}`
     const shareText = `참조 음성 들어보세요! "${refAudio?.ref_text?.slice(0, 50) || '음성 파일'}..."`
 
@@ -177,6 +186,10 @@ export default function ShareRefPage() {
 
   // 공유 음성에 추가
   const handleAddToShared = async () => {
+    if (isPreset) {
+      alert('프리셋 참조 음성은 공유 목록에 추가할 수 없습니다.')
+      return
+    }
     if (!currentUserId || !refAudio) {
       alert('로그인이 필요합니다.')
       return
@@ -292,13 +305,15 @@ export default function ShareRefPage() {
             </Link>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">공유된 참조 음성</h1>
           </div>
-          <button
-            onClick={handleShare}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white rounded-lg transition-all duration-300 text-sm font-medium"
-          >
-            <Share2 size={16} />
-            공유하기
-          </button>
+          {!isPreset && (
+            <button
+              onClick={handleShare}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white rounded-lg transition-all duration-300 text-sm font-medium"
+            >
+              <Share2 size={16} />
+              공유하기
+            </button>
+          )}
         </div>
 
         {/* 메인 컨텐츠 */}
@@ -362,7 +377,7 @@ export default function ShareRefPage() {
 
           {/* 공유 음성에 추가 버튼 */}
           <div className="flex flex-col sm:flex-row gap-3">
-            {currentUserId && currentUserId !== refAudio?.user_id ? (
+            {currentUserId && currentUserId !== refAudio?.user_id && !isPreset ? (
               <button
                 onClick={handleAddToShared}
                 disabled={addingToShared || addSuccess}
