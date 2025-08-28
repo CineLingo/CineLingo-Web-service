@@ -19,6 +19,24 @@ type StorageObject = {
   metadata?: object;
 };
 
+// RPC get_tts_usage 반환 타입
+type UsageInfo = {
+  used: number;
+  remaining: number;
+  reset_at: string | null;
+  allowed: boolean;
+  message: string | null;
+};
+
+function isUsageInfo(value: unknown): value is UsageInfo {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.remaining === 'number' &&
+    (typeof v.used === 'number' || typeof v.used === 'undefined')
+  );
+}
+
   // 미리 업로드된 오디오 파일 목록
   const PRESET_AUDIO_FILES = [
     { name: '유재석 참고음성', file: '/yoojaeseok_ref1.wav', duration: '약 10초' },
@@ -71,7 +89,6 @@ const FileUploadDemo = () => {
   const audioUrlRef = useRef<string | null>(null)
   // 일일 사용량 상태
   const [usageRemaining, setUsageRemaining] = useState<number | null>(null)
-  const [usageResetAt, setUsageResetAt] = useState<string | null>(null)
   
   // 오디오 진행률 관련 상태
   const [currentTime, setCurrentTime] = useState(0)
@@ -176,15 +193,13 @@ const FileUploadDemo = () => {
     try {
       const { data, error } = await supabase
         .rpc('get_tts_usage', { user_uuid: userId })
-        .single()
       if (!error && data) {
-        const row = data as any
-        if (typeof row.remaining === 'number') setUsageRemaining(row.remaining)
-        if (row.reset_at) setUsageResetAt(row.reset_at as string)
+        const row = Array.isArray(data) ? data[0] : data
+        if (isUsageInfo(row)) setUsageRemaining(row.remaining as number)
       } else if (error) {
         console.error('get_tts_usage RPC error:', error?.message || error)
       }
-    } catch (e) {
+    } catch {
       // 무시 (UI에 치명적이지 않음)
     }
   }, [supabase, userId])
@@ -760,7 +775,8 @@ const FileUploadDemo = () => {
     uploadRecordedAudio,
     toPresetStoragePath,
     supabase, 
-    uploadReferenceAudioAndGetRefId
+    uploadReferenceAudioAndGetRefId,
+    fetchUsage
   ])
 
   // 파일 업로드 성공 시 호출되는 함수 (기존 구조 유지)
