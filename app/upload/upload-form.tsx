@@ -381,73 +381,13 @@ const FileUploadDemo = () => {
     setShowTextExamples(false)
   }, [])
 
-  // 미리 선택된 오디오를 Supabase에 업로드하는 함수
-  const uploadPresetAudio = useCallback(async (): Promise<string | null> => {
-    if (!selectedPresetAudio || !userId) return null
-    
-    try {
-      // 미리 선택된 오디오 파일을 fetch로 가져와서 Blob으로 변환
-      const response = await fetch(selectedPresetAudio)
-      if (!response.ok) {
-        throw new Error('Failed to fetch preset audio')
-      }
-      
-      const blob = await response.blob()
-      
-      // 파일명 추출
-      const fileName = `${Date.now()}_${selectedPresetAudio.split('/').pop()}`;
-      const filePath = `reference/${userId}/${fileName}`;
-      
-      // Supabase Storage에 업로드
-      const { error } = await supabase.storage
-        .from('prototype')
-        .upload(filePath, blob, {
-          cacheControl: '3600',
-          upsert: true // 반드시 true로!
-        })
-      
-      if (error) {
-        console.error('미리 선택된 오디오 업로드 실패:', error)
-        setErrorMessage('미리 선택된 오디오 업로드에 실패했습니다.')
-        return null
-      }
-      
-      return filePath
-    } catch (error) {
-      console.error('미리 선택된 오디오 업로드 중 오류:', error)
-      setErrorMessage('미리 선택된 오디오 업로드 중 오류가 발생했습니다.')
-      return null
-    }
-  }, [selectedPresetAudio, userId, supabase])
+  // 프리셋 public 경로를 스토리지 키로 변환
+  const toPresetStoragePath = useCallback((publicPath: string): string => {
+    const base = publicPath.startsWith('/') ? publicPath.slice(1) : publicPath
+    return `preset_audio/${base}`
+  }, [])
 
-  // 이전에 사용한 음성 처리 함수 (이미 업로드된 파일이므로 복사만 수행)
-  const handleUsedAudioFile = useCallback(async (): Promise<string | null> => {
-    if (!selectedMyVoice?.ref_file_path || !userId) return null
-    
-    try {
-      // 기존 파일 경로에서 새 파일명 생성
-      const originalFileName = selectedMyVoice.ref_file_path.split('/').pop();
-      const newFileName = `${Date.now()}_${originalFileName}`;
-      const newFilePath = `reference/${userId}/${newFileName}`;
-      
-      // 기존 파일을 새 경로로 복사
-      const { error } = await supabase.storage
-        .from('prototype')
-        .copy(selectedMyVoice.ref_file_path, newFilePath)
-      
-      if (error) {
-        console.error('이전 사용 음성 복사 실패:', error)
-        setErrorMessage('이전 사용 음성 처리에 실패했습니다.')
-        return null
-      }
-      
-      return newFilePath
-    } catch (error) {
-      console.error('이전 사용 음성 처리 중 오류:', error)
-      setErrorMessage('이전 사용 음성 처리 중 오류가 발생했습니다.')
-      return null
-    }
-  }, [selectedMyVoice, userId, supabase])
+  // 이전 사용 음성 복사 금지: 별도 복사 없이 기존 경로를 그대로 사용
 
   // 녹음된 오디오가 변경될 때마다 미리보기 설정
   useEffect(() => {
@@ -526,6 +466,7 @@ const FileUploadDemo = () => {
         .from('ref_audios')
         .select('ref_id, ref_file_url, ref_file_path, ref_text, created_at')
         .eq('user_id', userId)
+        .not('ref_file_path', 'ilike', 'preset_audio/%')
         .order('created_at', { ascending: false });
       if (error) {
         setErrorMessage('내 음성 목록을 불러오지 못했습니다.');
@@ -696,10 +637,8 @@ const FileUploadDemo = () => {
         // 녹음된 오디오 처리
         filePath = await uploadRecordedAudio()
       } else if (selectedPresetAudio) {
-        // 미리 준비된 오디오 처리
-        filePath = await uploadPresetAudio()
-      } else if (selectedMyVoice) { // 이전에 사용한 오디오 처리
-        filePath = await handleUsedAudioFile()
+        // 프리셋: 스토리지의 preset_audio/<파일>을 직접 사용
+        filePath = toPresetStoragePath(selectedPresetAudio)
       } else {
         // 파일 업로드가 필요한 경우 - 이는 onUploadSuccess에 의해 처리됨
         setErrorMessage('오디오 파일을 선택해주세요.')
@@ -825,8 +764,7 @@ const FileUploadDemo = () => {
     selectedSharedVoice,
     isProcessing,
     uploadRecordedAudio,
-    uploadPresetAudio,
-    handleUsedAudioFile,
+    toPresetStoragePath,
     supabase, 
     uploadReferenceAudioAndGetRefId
   ])
