@@ -69,6 +69,9 @@ const FileUploadDemo = () => {
   const [isPlaying, setIsPlaying] = useState(false)
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null)
   const audioUrlRef = useRef<string | null>(null)
+  // 일일 사용량 상태
+  const [usageRemaining, setUsageRemaining] = useState<number | null>(null)
+  const [usageResetAt, setUsageResetAt] = useState<string | null>(null)
   
   // 오디오 진행률 관련 상태
   const [currentTime, setCurrentTime] = useState(0)
@@ -166,6 +169,32 @@ const FileUploadDemo = () => {
     }
     fetchUser()
   }, [supabase])
+
+  // 남은 횟수 조회
+  const fetchUsage = useCallback(async () => {
+    if (!userId) return
+    try {
+      const { data, error } = await supabase
+        .rpc('get_tts_usage', { user_uuid: userId })
+        .single()
+      if (!error && data) {
+        const row = data as any
+        if (typeof row.remaining === 'number') setUsageRemaining(row.remaining)
+        if (row.reset_at) setUsageResetAt(row.reset_at as string)
+      } else if (error) {
+        console.error('get_tts_usage RPC error:', error?.message || error)
+      }
+    } catch (e) {
+      // 무시 (UI에 치명적이지 않음)
+    }
+  }, [supabase, userId])
+
+  // 사용자 설정 후 사용량 조회
+  useEffect(() => {
+    if (userId) {
+      fetchUsage()
+    }
+  }, [userId, fetchUsage])
 
   // 오디오 재생/일시정지 토글
   const togglePlayPause = useCallback(() => {
@@ -678,74 +707,39 @@ const FileUploadDemo = () => {
 
 
 
-      // 5단계: TTS Runner Edge Function 호출
+      // 5단계: 서버 API 호출 (일일 제한 검사 포함)
       try {
-        console.log('Calling TTS Runner Edge Function...')
-        console.log('Request payload:', {
-          reference_id: ref_id,
-          reference_audio_url: signedUrl,
-          input_text: gen_text,
-          user_id: userId
-        })
-        
-        const { data: functionData, error: functionError } = await supabase.functions.invoke('rapid-worker', {
-          body: {
+        const resp = await fetch('/api/tts/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             reference_id: ref_id,
             reference_audio_url: signedUrl,
-            input_text: gen_text,
-            user_id: userId
-          }
+            input_text: gen_text
+          })
         })
 
-        if (functionError) {
-          console.error('Error calling TTS Runner:', functionError)
-          console.error('Error details:', {
-            message: functionError.message,
-            name: functionError.name,
-            status: functionError.status,
-            statusText: functionError.statusText
-          })
-          
-          setErrorMessage(`Edge Function 호출 실패: ${functionError.message}`)
+        const json = await resp.json().catch(() => ({}))
+        if (!resp.ok) {
+          setErrorMessage(json?.message || '요청 처리 중 오류가 발생했습니다.')
+          setIsProcessing(false)
+          // 카운트가 증가하지 않았을 수도 있으니 최신 상태 조회
+          fetchUsage()
+          return
+        }
+
+        const requestId = json?.request_id
+        if (!requestId) {
+          setErrorMessage('요청 ID 생성에 실패했습니다.')
           setIsProcessing(false)
           return
-        } else {
-          console.log('TTS Runner called successfully:', functionData)
-          
-          // Edge Function에서 반환된 request_id 사용
-          const requestId = functionData?.request_id
-          if (!requestId) {
-            console.error('No request_id returned from Edge Function')
-            setErrorMessage('요청 ID 생성에 실패했습니다.')
-            setIsProcessing(false)
-            return
-          }
-          
-          // 큐 정보 저장
-          console.log('Function data received:', functionData)
-          if (functionData?.queue_info) {
-            console.log('Queue info received:', functionData.queue_info)
-            setCurrentRequestId(requestId)
-            // 즉시 큐 정보를 useQueueMonitor에 전달
-            console.log('✅ Queue info immediately available')
-          } else {
-            console.log('No queue info in response, setting requestId anyway')
-            setCurrentRequestId(requestId)
-          }
-          
-          console.log('Request ID from Edge Function:', requestId)
-          
-          // useQueueMonitor가 큐 상태를 관리하므로 별도 폴링 제거
-          console.log('🔄 Queue monitoring handled by useQueueMonitor hook')
         }
+
+        setCurrentRequestId(requestId)
+        // 최신 남은 횟수 갱신
+        fetchUsage()
       } catch (functionError) {
-        console.error('Error calling TTS Runner function:', functionError)
-        console.error('Exception details:', {
-          message: functionError instanceof Error ? functionError.message : 'Unknown error',
-          stack: functionError instanceof Error ? functionError.stack : undefined
-        })
-        
-        setErrorMessage(`Edge Function 호출 중 오류: ${functionError instanceof Error ? functionError.message : 'Unknown error'}`)
+        setErrorMessage(`요청 처리 중 오류: ${functionError instanceof Error ? functionError.message : 'Unknown error'}`)
         setIsProcessing(false)
         return
       }
@@ -1399,12 +1393,20 @@ const FileUploadDemo = () => {
                 disabled={
                   (props.files.length > 0 && props.files.some((file) => file.errors.length !== 0)) || 
                   !gen_text.trim() ||
-                  isProcessing
+                  isProcessing ||
+                  (usageRemaining !== null && usageRemaining <= 0)
                 }
                 className="w-full bg-gradient-to-r from-pink-500 to-purple-500 text-white py-4 rounded-full font-medium hover:from-pink-600 hover:to-purple-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
               >
                 {isProcessing ? '처리 중...' : 'TTS 생성 시작'}
               </button>
+              {/* 남은 횟수 배지 */}
+              <div className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
+                {usageRemaining === null ? '남은 횟수 확인 중…' : `오늘 남은 생성 ${usageRemaining}/20`}
+                {usageRemaining !== null && usageRemaining <= 0 && (
+                  <span className="block text-red-500 mt-1">하루 20회 한도를 초과했습니다. 내일 00:00(KST)에 초기화됩니다.</span>
+                )}
+              </div>
             </div>
           )}
         </div>
