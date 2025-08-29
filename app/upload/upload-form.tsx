@@ -863,7 +863,7 @@ const FileUploadDemo = () => {
     path: userId ? `reference/${userId}` : undefined,
     allowedMimeTypes: ['audio/*'],
     maxFiles: 1,
-    maxFileSize: 1000 * 1000 * 10, // 10MB
+    maxFileSize: 1000 * 1000 * 5, // 5MB
     upsert: true,
     onSuccess: onUploadSuccess,
   })
