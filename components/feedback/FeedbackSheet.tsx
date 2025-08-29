@@ -1,15 +1,18 @@
-'use client'
+"use client"
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 
-type Props = {
-  ttsId: string
+type PropsBase = {
   open: boolean
   onClose: () => void
   onSubmitted?: () => void
   mode?: 'create' | 'edit'
   initial?: Partial<Record<RatingKey, number>> & { comment?: string; id?: string }
 }
+
+type TtsVariantProps = PropsBase & { variant?: 'tts'; ttsId: string }
+type SiteVariantProps = PropsBase & { variant: 'site'; pagePath?: string }
+type Props = TtsVariantProps | SiteVariantProps
 
 type RatingKey = 'rating_overall'
 
@@ -30,7 +33,8 @@ function getOrCreateSessionId(): string {
   return sid
 }
 
-export default function FeedbackSheet({ ttsId, open, onClose, onSubmitted, mode = 'create', initial }: Props) {
+export default function FeedbackSheet(props: Props) {
+  const { open, onClose, onSubmitted, mode = 'create', initial } = props
   const [ratings, setRatings] = useState<Record<RatingKey, number>>({ rating_overall: 0 })
   const [comment, setComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -59,25 +63,31 @@ export default function FeedbackSheet({ ttsId, open, onClose, onSubmitted, mode 
       setSubmitting(true)
       setError(null)
       const sessionId = getOrCreateSessionId()
-      const endpoint = '/api/feedback'
-      const payload = {
-        tts_id: ttsId,
+      const isSite = props.variant === 'site'
+      const endpoint = isSite ? '/api/site-feedback' : '/api/feedback'
+      const basePayload: Record<string, unknown> = {
         ...ratings,
         comment: comment?.trim() ? comment.trim() : undefined,
         session_id: sessionId,
-        id: initial?.id
+        id: initial?.id,
+      }
+      if (isSite) {
+        const page_path = props.variant === 'site' ? (props.pagePath || (typeof window !== 'undefined' ? window.location.pathname : '/')) : undefined
+        basePayload.page_path = page_path
+      } else {
+        basePayload.tts_id = (props as TtsVariantProps).ttsId
       }
       const res = await fetch(endpoint, {
-        method: mode === 'edit' ? 'PUT' : 'POST',
+        method: isSite ? 'POST' : (mode === 'edit' ? 'PUT' : 'POST'),
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(basePayload),
       })
       if (res.status === 201 || res.status === 204 || res.status === 200) {
         onSubmitted?.()
         onClose()
         return
       }
-      if (res.status === 409) {
+      if (!isSite && res.status === 409) {
         // 이미 제출된 경우도 성공 유사 처리
         onSubmitted?.()
         onClose()
@@ -90,7 +100,7 @@ export default function FeedbackSheet({ ttsId, open, onClose, onSubmitted, mode 
     } finally {
       setSubmitting(false)
     }
-  }, [disabled, ratings, comment, ttsId, onClose, onSubmitted, mode, initial?.id])
+  }, [disabled, ratings, comment, onClose, onSubmitted, mode, initial?.id, props])
 
   if (!open) return null
 

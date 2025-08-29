@@ -1,7 +1,12 @@
+"use client"
+
 import { Button } from "./ui/button";
 import Link from "next/link";
+import React from "react";
+import FeedbackSheet from "./feedback/FeedbackSheet";
 
 export function Hero() {
+  const [open, setOpen] = React.useState(false)
   return (
     <div className="flex flex-col justify-center items-center min-h-[calc(100vh-200px)] px-6 sm:px-8 py-12 sm:py-16 animate-fade-in">
       {/* 메인 콘텐츠 영역 */}
@@ -55,6 +60,16 @@ export function Hero() {
         >
           <Link href="/user/results">이전 결과 보기</Link>
         </Button>
+
+        {/* 사이트 피드백 남기기 버튼 */}
+        <Button
+          type="button"
+          size="sm"
+          className="w-full text-sm sm:text-base px-6 py-4 h-auto transition-all duration-300 transform hover:scale-105 bg-blue-50 dark:bg-gray-800 text-blue-700 dark:text-gray-200 hover:bg-blue-100 dark:hover:bg-gray-700 rounded-xl font-medium"
+          onClick={() => setOpen(true)}
+        >
+          사이트 피드백 남기기
+        </Button>
       </div>
 
       {/* 서비스 이용 안내 - 스크롤 후 보이는 영역 */}
@@ -65,6 +80,8 @@ export function Hero() {
           타인의 동의 없는 음성 복제, 사칭, 범죄 목적의 사용은 금지됩니다.
         </p>
       </div>
+      {/* 피드백 시트 */}
+      <FeedbackSheet variant="site" open={open} onClose={() => setOpen(false)} />
     </div>
   );
 }
