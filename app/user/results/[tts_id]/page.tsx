@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { NavTheme } from '@/components/nav-theme'
 import dynamic from 'next/dynamic'
+import AudioPlayer from '@/components/AudioPlayer'
 import ShareButton from '@/components/ShareButton'
 import ShareRefButton from '@/components/ShareRefButton'
 
@@ -342,12 +343,7 @@ export default function TTSResultDetailPage() {
             {ttsRequest.gen_audios && ttsRequest.gen_audios.length > 0 ? (
               <div className="space-y-4">
                 <div className="w-full">
-                  <audio 
-                    controls 
-                    src={ttsRequest.gen_audios[0].gen_file_url} 
-                    className="w-full h-12 sm:h-14"
-                    preload="metadata"
-                  />
+                  <AudioPlayer audioUrl={ttsRequest.gen_audios[0].gen_file_url} />
                 </div>
                 
                 {/* 생성된 음성 정보 */}
@@ -433,12 +429,7 @@ export default function TTSResultDetailPage() {
             <div className="p-4 sm:p-6">
               <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">내 음성 (참조 음성)</h2>
               <div className="w-full">
-                <audio 
-                  controls 
-                  src={ttsRequest.ref_audios[0].ref_file_url} 
-                  className="w-full h-12 sm:h-14"
-                  preload="metadata"
-                />
+                <AudioPlayer audioUrl={ttsRequest.ref_audios[0].ref_file_url} />
               </div>
             </div>
           )}

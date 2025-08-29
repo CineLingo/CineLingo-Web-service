@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { ArrowLeft, Play, Pause, Volume2, Share2, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
@@ -37,7 +37,7 @@ export default function SharePage() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
-  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null)
+  const audioRef = useRef<HTMLAudioElement>(null)
   const [showShareModal, setShowShareModal] = useState(false)
   const supabase = createClient()
   const params = useParams()
@@ -130,49 +130,40 @@ export default function SharePage() {
     fetchTTSRequest()
   }, [ttsId, supabase])
 
-  // 오디오 플레이어 설정
+  // 오디오 src 변경 시 로드 (iOS 안정화)
   useEffect(() => {
-    if (ttsRequest?.gen_audios && ttsRequest.gen_audios.length > 0) {
-      const audio = new Audio(ttsRequest.gen_audios[0].gen_file_url)
-      
-      audio.addEventListener('loadedmetadata', () => {
-        setDuration(audio.duration)
-      })
-      
-      audio.addEventListener('timeupdate', () => {
-        setCurrentTime(audio.currentTime)
-      })
-      
-      audio.addEventListener('ended', () => {
-        setIsPlaying(false)
-        setCurrentTime(0)
-      })
-      
-      setAudioElement(audio)
-      
-      return () => {
-        audio.pause()
-        audio.removeEventListener('loadedmetadata', () => {})
-        audio.removeEventListener('timeupdate', () => {})
-        audio.removeEventListener('ended', () => {})
+    if (audioRef.current) {
+      try {
+        audioRef.current.load()
+      } catch {
+        // ignore
       }
+      setIsPlaying(false)
+      setCurrentTime(0)
+      setDuration(0)
     }
   }, [ttsRequest?.gen_audios])
 
   // 재생/일시정지 토글
-  const togglePlay = () => {
-    if (!audioElement) return
-    
-    if (isPlaying) {
-      audioElement.pause()
-    } else {
-      audioElement.play()
+  const togglePlay = async () => {
+    const el = audioRef.current
+    if (!el) return
+    try {
+      if (isPlaying) {
+        el.pause()
+      } else {
+        await el.play()
+      }
+      setIsPlaying(!isPlaying)
+    } catch (e) {
+      // 재생 실패는 조용히 무시 (브라우저 정책)
+      // console.error('오디오 재생 실패:', e)
     }
-    setIsPlaying(!isPlaying)
   }
 
   // 진행률 표시
   const formatTime = (time: number) => {
+    if (!Number.isFinite(time) || time < 0) return '0:00'
     const minutes = Math.floor(time / 60)
     const seconds = Math.floor(time % 60)
     return `${minutes}:${seconds.toString().padStart(2, '0')}`
@@ -317,6 +308,31 @@ export default function SharePage() {
             <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">생성된 음성</h2>
             {ttsRequest.gen_audios && ttsRequest.gen_audios.length > 0 ? (
               <div className="space-y-4">
+                {/* 숨김 오디오 엘리먼트 */}
+                <audio
+                  ref={audioRef}
+                  src={ttsRequest.gen_audios[0].gen_file_url}
+                  preload="metadata"
+                  playsInline
+                  style={{ display: 'none' }}
+                  onLoadedMetadata={() => {
+                    const el = audioRef.current
+                    if (!el) return
+                    setDuration(Number.isFinite(el.duration) ? el.duration : 0)
+                  }}
+                  onTimeUpdate={() => {
+                    const el = audioRef.current
+                    if (!el) return
+                    setCurrentTime(el.currentTime)
+                  }}
+                  onEnded={() => {
+                    setIsPlaying(false)
+                    setCurrentTime(0)
+                  }}
+                  onError={() => {
+                    // 조용히 처리
+                  }}
+                />
                 {/* 커스텀 오디오 플레이어 */}
                 <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                   <div className="flex items-center gap-4 mb-3">
@@ -341,7 +357,7 @@ export default function SharePage() {
                   <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
                     <div 
                       className="bg-gradient-to-r from-blue-600 to-purple-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+                      style={{ width: `${Number.isFinite(duration) && duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
                     />
                   </div>
                 </div>
@@ -383,9 +399,8 @@ export default function SharePage() {
                 asChild 
                 className="h-auto px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-white text-sm sm:text-base font-medium"
               >
-                <Link href="/upload" className="inline-flex items-center justify-center gap-2">
-                  <ExternalLink size={16} />
-                  TTS 시작하기
+                <Link href="/upload" className="inline-flex items-center justify-center">
+                  TTS 생성하기
                 </Link>
               </Button>
             </div>

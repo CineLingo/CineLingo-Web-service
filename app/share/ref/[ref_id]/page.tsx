@@ -1,8 +1,8 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Share2, Plus, Mic, User } from 'lucide-react'
+import { ArrowLeft, Share2, Plus, Mic, User, Play, Pause, Volume2 } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -30,10 +30,12 @@ export default function ShareRefPage() {
   const [error, setError] = useState<string | null>(null)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
+  const [isPlaying, setIsPlaying] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
   const [addingToShared, setAddingToShared] = useState(false)
   const [addSuccess, setAddSuccess] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const audioRef = useRef<HTMLAudioElement>(null)
   
   const supabase = createClient()
   const params = useParams()
@@ -107,29 +109,17 @@ export default function ShareRefPage() {
     fetchRefAudio()
   }, [refId, supabase])
 
-  // 오디오 플레이어 설정
+  // 오디오 src 변경 시 로드 (iOS 안정화)
   useEffect(() => {
-    if (refAudio?.ref_file_url) {
-      const audio = new Audio(refAudio.ref_file_url)
-      
-      audio.addEventListener('loadedmetadata', () => {
-        setDuration(audio.duration)
-      })
-      
-      audio.addEventListener('timeupdate', () => {
-        setCurrentTime(audio.currentTime)
-      })
-      
-      audio.addEventListener('ended', () => {
-        setCurrentTime(0)
-      })
-      
-      return () => {
-        audio.pause()
-        audio.removeEventListener('loadedmetadata', () => {})
-        audio.removeEventListener('timeupdate', () => {})
-        audio.removeEventListener('ended', () => {})
+    if (audioRef.current) {
+      try {
+        audioRef.current.load()
+      } catch {
+        // ignore
       }
+      setIsPlaying(false)
+      setCurrentTime(0)
+      setDuration(0)
     }
   }, [refAudio?.ref_file_url])
 
@@ -137,9 +127,26 @@ export default function ShareRefPage() {
 
   // 진행률 표시
   const formatTime = (time: number) => {
+    if (!Number.isFinite(time) || time < 0) return '0:00'
     const minutes = Math.floor(time / 60)
     const seconds = Math.floor(time % 60)
     return `${minutes}:${seconds.toString().padStart(2, '0')}`
+  }
+
+  // 재생/일시정지 토글
+  const togglePlay = async () => {
+    const el = audioRef.current
+    if (!el) return
+    try {
+      if (isPlaying) {
+        el.pause()
+      } else {
+        await el.play()
+      }
+      setIsPlaying(!isPlaying)
+    } catch {
+      // ignore
+    }
   }
 
   // 프리셋 여부 판단 (preset_audio/* 경로)
@@ -169,6 +176,18 @@ export default function ShareRefPage() {
       // 데스크톱에서는 모달 표시
       setShowShareModal(true)
     }
+  }
+
+  // 날짜 포맷팅 (share/[tts_id]와 동일 스타일)
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   }
 
   // 클립보드에 링크 복사
@@ -315,55 +334,90 @@ export default function ShareRefPage() {
           )}
         </div>
 
-        {/* 메인 컨텐츠 */}
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-6 sm:p-8">
-          {/* 사용자 정보 */}
-          {refAudio?.user && (
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-teal-500 rounded-full flex items-center justify-center">
-                <User size={20} className="text-white" />
-              </div>
+        {/* 메인 컨텐츠 (share/[tts_id]와 동일 스타일) */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+          {/* 참조 정보 */}
+          <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">참조 정보</h2>
+            <div className="grid grid-cols-1 gap-3 sm:gap-4">
               <div>
-                <p className="font-medium text-gray-900 dark:text-gray-100">
-                  {refAudio.user.display_name || '익명 사용자'}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {refAudio.user.email}
+                <label className="block text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  생성 시간
+                </label>
+                <p className="text-sm text-gray-900 dark:text-gray-100">
+                  {refAudio?.created_at ? formatDate(refAudio.created_at) : '-'}
                 </p>
               </div>
             </div>
-          )}
+          </div>
 
           {/* 참조 텍스트 */}
-          <div className="mb-6">
+          <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">참조 음성의 텍스트</h2>
-            <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-              <p className="text-gray-900 dark:text-gray-100 text-sm sm:text-base leading-relaxed">
+            <div className="bg-gray-50 dark:bg-gray-700 p-3 sm:p-4 rounded-lg">
+              <p className="text-sm sm:text-base text-gray-900 dark:text-gray-100 whitespace-pre-wrap leading-relaxed">
                 {refAudio?.ref_text || '참조 텍스트가 없습니다.'}
               </p>
             </div>
           </div>
 
-          {/* 참조 음성 플레이어 */}
-          <div className="mb-6">
+          {/* 참조 음성 플레이어 (share/[tts_id] 동일 구성) */}
+          <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-gray-900 dark:text-gray-100">참조 음성</h2>
             {refAudio?.ref_file_url ? (
               <div className="space-y-4">
-                <div className="w-full">
-                  <audio 
-                    controls 
-                    src={refAudio.ref_file_url} 
-                    className="w-full h-12 sm:h-14"
-                    preload="metadata"
-                  />
-                </div>
-                
-                {/* 재생 정보 */}
-                <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400">
-                  <span>재생 시간: {formatTime(currentTime)} / {formatTime(duration)}</span>
-                  {refAudio.ref_duration && (
-                    <span>총 길이: {formatTime(refAudio.ref_duration)}</span>
-                  )}
+                {/* 숨김 오디오 엘리먼트 */}
+                <audio 
+                  ref={audioRef}
+                  src={refAudio.ref_file_url} 
+                  preload="metadata"
+                  playsInline
+                  style={{ display: 'none' }}
+                  onLoadedMetadata={() => {
+                    const el = audioRef.current
+                    if (!el) return
+                    setDuration(Number.isFinite(el.duration) ? el.duration : 0)
+                  }}
+                  onTimeUpdate={() => {
+                    const el = audioRef.current
+                    if (!el) return
+                    setCurrentTime(el.currentTime)
+                  }}
+                  onEnded={() => {
+                    setIsPlaying(false)
+                    setCurrentTime(0)
+                  }}
+                  onError={() => {
+                    // 조용히 처리
+                  }}
+                />
+
+                {/* 커스텀 오디오 플레이어 (share/[tts_id] 스타일) */}
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                  <div className="flex items-center gap-4 mb-3">
+                    <button
+                      onClick={togglePlay}
+                      className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-full flex items-center justify-center transition-all duration-300"
+                    >
+                      {isPlaying ? <Pause size={20} /> : <Play size={20} />}
+                    </button>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Volume2 size={16} className="text-gray-500" />
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Reference Voice</span>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {formatTime(currentTime)} / {formatTime(duration)}
+                      </div>
+                    </div>
+                  </div>
+                  {/* 진행률 바 */}
+                  <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                    <div 
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${Number.isFinite(duration) && duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+                    />
+                  </div>
                 </div>
               </div>
             ) : (
@@ -374,46 +428,58 @@ export default function ShareRefPage() {
             )}
           </div>
 
-          {/* 공유 음성에 추가 버튼 */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            {currentUserId && currentUserId !== refAudio?.user_id && !isPreset ? (
-              <button
-                onClick={handleAddToShared}
-                disabled={addingToShared || addSuccess}
-                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 disabled:from-green-400 disabled:to-teal-400 text-white rounded-lg transition-all duration-300 text-sm font-medium disabled:cursor-not-allowed"
-              >
-                {addingToShared ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    추가 중...
-                  </>
-                ) : addSuccess ? (
-                  <>
-                    <Plus size={16} />
-                    추가 완료!
-                  </>
-                ) : (
-                  <>
-                    <Plus size={16} />
-                    공유 음성에 추가
-                  </>
-                )}
-              </button>
-            ) : !currentUserId ? (
-              <Link
-                href="/auth/login"
-                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-all duration-300 text-sm font-medium"
-              >
-                로그인하여 추가하기
-              </Link>
-            ) : null}
-            
-            <Button 
-              asChild 
-              className="flex-1 sm:flex-none h-auto px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-white text-sm sm:text-base font-medium"
-            >
-              <Link href="/upload">TTS 생성하기</Link>
-            </Button>
+          {/* CTA 섹션: 같은 블록 내부에 배치 */}
+          <div className="p-4 sm:p-6">
+            <div className="text-center">
+              <h3 className="text-lg sm:text-xl font-semibold mb-3 text-gray-900 dark:text-gray-100">
+                나도 만들어보세요!
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm sm:text-base">
+                나만의 음성으로 TTS를 생성해보세요.
+              </p>
+              <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+                {currentUserId && currentUserId !== refAudio?.user_id && !isPreset ? (
+                  <button
+                    onClick={handleAddToShared}
+                    disabled={addingToShared || addSuccess}
+                    className="px-4 py-3 bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 disabled:from-green-400 disabled:to-teal-400 text-white rounded-lg transition-all duration-300 text-sm sm:text-base font-medium disabled:cursor-not-allowed"
+                  >
+                    {addingToShared ? (
+                      <>
+                        <div className="inline-block align-[-2px] animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        추가 중...
+                      </>
+                    ) : addSuccess ? (
+                      <>
+                        <Plus size={16} className="inline-block mr-2" />
+                        추가 완료!
+                      </>
+                    ) : (
+                      <>
+                        <Plus size={16} className="inline-block mr-2" />
+                        공유 음성에 추가
+                      </>
+                    )}
+                  </button>
+                ) : !currentUserId ? (
+                  <Link
+                    href="/auth/login"
+                    className="px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-lg transition-all duration-300 text-sm font-medium"
+                  >
+                    로그인하여 추가하기
+                  </Link>
+                ) : null}
+
+                <Button 
+                  asChild 
+                  className="h-auto px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-white text-sm sm:text-base font-medium"
+                >
+                  <Link href="/upload" className="inline-flex items-center justify-center">
+                    TTS 생성하기
+                  </Link>
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 

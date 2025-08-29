@@ -852,11 +852,10 @@ export default function UserResultsContent() {
                   <div className="mb-3 sm:mb-4">
                     {row.ref_audios && row.ref_audios.length > 0 ? (
                       <div className="w-full">
-                        <audio 
-                          controls 
-                          src={row.ref_audios[0].ref_file_url} 
-                          className="w-full h-12 sm:h-14"
-                          preload="metadata"
+                        <AudioPlayer 
+                          audioUrl={row.ref_audios[0].ref_file_url}
+                          width={isMobile ? 350 : 400}
+                          height={isMobile ? 60 : 50}
                         />
                       </div>
                     ) : (

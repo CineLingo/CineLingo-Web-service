@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Volume2 } from 'lucide-react'
 import MinimalPlayButton from './MinimalPlayButton'
+import AudioVisualizer from './AudioVisualizer'
 
 interface AudioPlayerWithRealWaveformProps {
   audioUrl: string
@@ -88,7 +89,11 @@ export default function AudioPlayerWithRealWaveform({
     if (!audio) return
 
     const handleLoadedMetadata = () => {
-      setDuration(audio.duration)
+      if (Number.isFinite(audio.duration)) {
+        setDuration(audio.duration)
+      } else {
+        setDuration(0)
+      }
     }
 
     const handleTimeUpdate = () => {
@@ -158,6 +163,7 @@ export default function AudioPlayerWithRealWaveform({
 
   // 시간 포맷팅
   const formatTime = (seconds: number) => {
+    if (!Number.isFinite(seconds) || seconds < 0) return '0:00'
     const mins = Math.floor(seconds / 60)
     const secs = Math.floor(seconds % 60)
     return `${mins}:${secs.toString().padStart(2, '0')}`
@@ -169,7 +175,11 @@ export default function AudioPlayerWithRealWaveform({
       style={{ width, height }}
     >
       {/* 오디오 엘리먼트 */}
-      <audio ref={audioRef} src={audioUrl} preload="auto" />
+      <audio ref={audioRef} src={audioUrl} preload="metadata" playsInline onLoadedMetadata={() => {
+        const audio = audioRef.current
+        if (!audio) return
+        setDuration(Number.isFinite(audio.duration) ? audio.duration : 0)
+      }} />
       
       {/* 플레이 버튼 */}
       <MinimalPlayButton
@@ -178,37 +188,10 @@ export default function AudioPlayerWithRealWaveform({
         size="lg"
       />
 
-      {/* 웨이브폼 컨테이너 */}
+      {/* 비주얼라이저 + 프로그레스 */}
       <div className="flex-1 relative">
-        {/* 배경 웨이브폼 */}
-        <div className="flex items-end gap-0.5 h-12">
-          {waveformData.map((height, index) => (
-            <div
-              key={index}
-              className="flex-1 bg-gray-300 dark:bg-gray-600 rounded-sm transition-all duration-300"
-              style={{ height: `${height * 100}%` }}
-            />
-          ))}
-        </div>
-
-        {/* 프로그레스 웨이브폼 (마스크 적용) */}
-        <div 
-          className="absolute top-0 left-0 flex items-end gap-0.5 h-12 overflow-hidden transition-all duration-100"
-          style={{ width: `${progress}%` }}
-        >
-          {waveformData.map((height, index) => (
-            <div
-              key={index}
-              className="flex-1 rounded-sm"
-              style={{ 
-                height: `${height * 100}%`,
-                background: 'linear-gradient(135deg, #2563EB 0%, #9333EA 50%, #DB2777 100%)'
-              }}
-            />
-          ))}
-        </div>
-
-        {/* 프로그레스 바 */}
+        {/* 마운트 이후 렌더링하여 초기 깜빡임 방지 */}
+        {typeof window !== 'undefined' && <AudioVisualizer active={isPlaying} className="h-12" />}
         <div 
           className="absolute bottom-0 left-0 w-full h-0.5 bg-gray-200 dark:bg-gray-700 cursor-pointer rounded-full"
           onClick={handleProgressClick}
@@ -238,11 +221,7 @@ export default function AudioPlayerWithRealWaveform({
 
       {/* 시간 표시 */}
       <div className="flex-shrink-0 text-sm text-gray-600 dark:text-gray-400 min-w-[60px] text-right">
-        {audioRef.current ? (
-          `${formatTime(audioRef.current.currentTime)} / ${formatTime(duration)}`
-        ) : (
-          '0:00 / 0:00'
-        )}
+        {audioRef.current ? `${formatTime(audioRef.current.currentTime)} / ${Number.isFinite(duration) && duration > 0 ? formatTime(duration) : '0:00'}` : '0:00 / 0:00'}
       </div>
 
       <style jsx>{`
