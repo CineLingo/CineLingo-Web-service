@@ -260,6 +260,12 @@ function EmailConfirmedContent() {
         <div className="w-full max-w-md">
           <Card className="text-center">
             <CardHeader>
+              <div className="mb-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-left text-amber-900 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200">
+                <p className="text-sm font-medium">동일한 브라우저에서 이메일 인증을 완료해주세요</p>
+                <p className="mt-1 text-xs leading-relaxed">
+                  예) 아이폰에서 크롬으로 회원가입을 시작했다면, <strong>같은 크롬 앱</strong>에서 네이버 메일에 로그인한 뒤 인증 메일의 링크를 눌러주세요. 다른 앱(사파리/네이버앱 등)으로 열면 인증이 실패할 수 있어요.
+                </p>
+              </div>
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900">
                 <CheckCircle className="h-8 w-8 text-red-600 dark:text-red-400" />
               </div>

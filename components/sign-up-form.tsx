@@ -194,6 +194,12 @@ export function SignUpForm({
           ) : (
             // 약관 동의 후: 실제 회원가입 폼
             <div className="space-y-4">
+              <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-amber-900 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200">
+                <p className="text-sm font-medium">동일한 브라우저에서 이메일 인증을 완료해주세요</p>
+                <p className="mt-1 text-xs leading-relaxed">
+                  예) 아이폰에서 크롬으로 회원가입을 시작했다면, <strong>같은 크롬 앱</strong>에서 네이버 메일에 로그인한 뒤 인증 메일의 링크를 눌러주세요. 다른 앱(사파리/네이버앱 등)으로 열면 인증이 실패할 수 있어요.
+                </p>
+              </div>
               {/* 약관 동의 완료 알림 및 재동의 버튼 */}
               <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
                 <div className="flex items-center justify-between">
