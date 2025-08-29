@@ -10,9 +10,12 @@ export function SiteNavbar() {
         <div className="flex items-center font-semibold">
           <Link
             href={"/"}
-            className="text-lg sm:text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
+            className="text-lg sm:text-xl font-bold"
           >
-            Lingo Voice
+            <span className="inline-flex items-baseline">
+              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Lingo Voice</span>
+              <span className="ml-2 text-[8px] text-gray-500 dark:text-gray-400 translate-y-[1px]">Beta</span>
+            </span>
           </Link>
         </div>
         <div className="flex items-center gap-3 sm:gap-4 w-40 sm:w-56 justify-end">

@@ -415,7 +415,7 @@ export default function TTSResultDetailPage() {
               >
                 <span className="inline-flex items-center justify-center gap-2">
                   <MessageSquare size={16} />
-                  {feedbackState?.exists ? '피드백 수정' : '피드백 남기기'}
+                  {feedbackState?.exists ? '피드백 수정하기' : '피드백 남기기'}
                 </span>
               </button>
             </div>
