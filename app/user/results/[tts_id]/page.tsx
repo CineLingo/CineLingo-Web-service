@@ -1,12 +1,13 @@
 'use client'
 
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Download, ArrowLeft, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { Download, ArrowLeft, Clock, CheckCircle, XCircle, AlertCircle, MessageSquare } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import HomeButton from '@/components/home-button'
 import { NavTheme } from '@/components/nav-theme'
+import dynamic from 'next/dynamic'
 import ShareButton from '@/components/ShareButton'
 import ShareRefButton from '@/components/ShareRefButton'
 
@@ -41,6 +42,12 @@ export default function TTSResultDetailPage() {
   const supabase = createClient()
   const params = useParams()
   const ttsId = params.tts_id as string
+  const FeedbackSheet = useMemo(
+    () => dynamic(() => import('@/components/feedback/FeedbackSheet'), { ssr: false }),
+    []
+  )
+  const [showFeedback, setShowFeedback] = useState(false)
+  const [feedbackState, setFeedbackState] = useState<{ exists: boolean; id?: string; initial?: any } | null>(null)
 
   // 로그인한 사용자 정보 가져오기
   useEffect(() => {
@@ -108,6 +115,31 @@ export default function TTSResultDetailPage() {
   useEffect(() => {
     fetchTTSRequest()
   }, [fetchTTSRequest])
+  // 피드백 존재 여부 조회 함수 및 초기 조회
+  const fetchFeedbackState = useCallback(async () => {
+    try {
+      if (!ttsId) return
+      const sessionId = ((): string => {
+        const key = 'feedback_session_id'
+        let sid = localStorage.getItem(key)
+        if (!sid) { sid = crypto.randomUUID(); localStorage.setItem(key, sid) }
+        return sid
+      })()
+      const res = await fetch(`/api/feedback?tts_id=${encodeURIComponent(ttsId)}&session_id=${encodeURIComponent(sessionId)}`)
+      if (!res.ok) return
+      const data = await res.json()
+      if (data.exists) {
+        setFeedbackState({ exists: true, id: data.feedback.id, initial: { rating_overall: data.feedback.rating_overall, comment: data.feedback.comment } })
+      } else {
+        setFeedbackState({ exists: false })
+      }
+    } catch {}
+  }, [ttsId])
+
+  useEffect(() => {
+    fetchFeedbackState()
+  }, [fetchFeedbackState])
+
 
   // 자동 새로고침
   useEffect(() => {
@@ -375,6 +407,18 @@ export default function TTSResultDetailPage() {
                 </div>
               </div>
             )}
+            {/* 피드백 CTA (생성된 음성 블럭 하단, 중립 색상) */}
+            <div className="mt-3">
+              <button
+                onClick={() => setShowFeedback(true)}
+                className="w-full h-12 sm:h-12 rounded-lg border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 bg-blue-50/60 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-sm sm:text-base font-semibold shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-700"
+              >
+                <span className="inline-flex items-center justify-center gap-2">
+                  <MessageSquare size={16} />
+                  {feedbackState?.exists ? '피드백 수정' : '피드백 남기기'}
+                </span>
+              </button>
+            </div>
           </div>
 
           {/* 구분선 */}
@@ -394,6 +438,8 @@ export default function TTSResultDetailPage() {
               </div>
             </div>
           )}
+
+          
 
           {/* 참조 음성 텍스트 */}
           {refText && (
@@ -446,6 +492,28 @@ export default function TTSResultDetailPage() {
 
 
         </div>
+
+        {/* 피드백 시트 */}
+        <FeedbackSheet
+          ttsId={ttsRequest.request_id}
+          open={showFeedback}
+          onClose={() => setShowFeedback(false)}
+          onSubmitted={() => {
+            try {
+              const key = 'feedback_submitted_tts_ids'
+              const arr = JSON.parse(localStorage.getItem(key) || '[]') as string[]
+              if (!arr.includes(ttsRequest.request_id)) {
+                arr.push(ttsRequest.request_id)
+                localStorage.setItem(key, JSON.stringify(arr))
+              }
+            } catch {}
+            fetchFeedbackState()
+          }}
+          mode={feedbackState?.exists ? 'edit' : 'create'}
+          initial={feedbackState?.exists ? { id: feedbackState.id, ...feedbackState.initial } : undefined}
+        />
+
+        
       </div>
     </div>
   )
