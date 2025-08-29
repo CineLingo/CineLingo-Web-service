@@ -6,7 +6,7 @@ import { useSupabaseUpload } from '@/hooks/use-supabase-upload'
 import { useQueueMonitor } from '@/hooks/use-queue-monitor'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { Play, Pause, Mic, Square, Music, User, Share2, ArrowLeft } from 'lucide-react'
+import { Play, Pause, Mic, Square, Music, User, Share2, ArrowLeft, AlertTriangle } from 'lucide-react'
 import { QueueStatusDisplay } from '@/components/QueueStatusDisplay'
 
 // Supabase Storage list 반환 객체 타입 정의
@@ -992,6 +992,25 @@ const FileUploadDemo = () => {
                 <span className="text-xs sm:text-sm font-medium hidden sm:inline">텍스트</span>
               </div>
           </div>
+          {currentStep === 'upload' && (
+            <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 p-3 text-xs sm:text-sm">
+              <div className="flex items-start space-x-2">
+                <AlertTriangle className="w-4 h-4 mt-0.5 text-amber-600 dark:text-amber-400" />
+                <span>입력 오디오는 무조건 한국어 음성만 사용해 주세요.</span>
+              </div>
+            </div>
+          )}
+          {currentStep === 'text' && (
+            <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 text-amber-900 dark:text-amber-100 p-3 text-xs sm:text-sm">
+              <div className="flex items-start space-x-2">
+                <AlertTriangle className="w-4 h-4 mt-0.5 text-amber-600 dark:text-amber-400" />
+                <div>
+                  <span>입력 텍스트는 발음나는 대로 한글만 입력해 주세요</span>
+                  <span className="block mt-1 text-[11px] text-amber-700 dark:text-amber-300">(예: 12시 → 열두시, Hi → 하이)</span>
+                </div>
+              </div>
+            </div>
+          )}
           {errorMessage && (
             <div className="p-3 bg-red-50 dark:bg-red-900/50 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg text-sm">
               {errorMessage}
@@ -1252,6 +1271,9 @@ const FileUploadDemo = () => {
                 </span>
                                   <button
                     onClick={() => {
+                      if (typeof window !== 'undefined') {
+                        window.scrollTo({ top: 0, behavior: 'smooth' })
+                      }
                       restartRecordingWithFileReset()
                       setSelectedPresetAudio(null)
                       setSelectedMyVoice(null)
@@ -1309,7 +1331,12 @@ const FileUploadDemo = () => {
 
               {/* 다음 단계 버튼 */}
               <button
-                onClick={() => setCurrentStep('text')}
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }
+                  setCurrentStep('text')
+                }}
                 className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 rounded-full font-medium hover:from-blue-600 hover:to-purple-600 transition-all duration-200 touch-manipulation"
               >
                 다음 단계
@@ -1324,7 +1351,12 @@ const FileUploadDemo = () => {
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-200">생성하고 싶은 텍스트</label>
                   <button
-                    onClick={() => setCurrentStep('preview')}
+                    onClick={() => {
+                      if (typeof window !== 'undefined') {
+                        window.scrollTo({ top: 0, behavior: 'smooth' })
+                      }
+                      setCurrentStep('preview')
+                    }}
                     className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors flex items-center space-x-1"
                   >
                     <span>뒤로가기</span>
