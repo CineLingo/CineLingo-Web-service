@@ -139,7 +139,7 @@ export default function AudioPlayer({
       style={{ width: '100%', maxWidth: width, height }}
     >
       {/* 오디오 엘리먼트 */}
-      <audio ref={audioRef} src={audioUrl} preload="metadata" />
+      <audio ref={audioRef} src={audioUrl} preload="auto" />
       
       {/* 플레이 버튼 */}
       <MinimalPlayButton

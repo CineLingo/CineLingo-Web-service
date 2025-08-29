@@ -102,6 +102,7 @@ const FileUploadDemo = () => {
   const [audioChunks, setAudioChunks] = useState<Blob[]>([])
   const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null)
   const [recordingTimer, setRecordingTimer] = useState<NodeJS.Timeout | null>(null)
+  const [recordingMime, setRecordingMime] = useState<string | null>(null)
   
   // 현재 단계 관리
   const [currentStep, setCurrentStep] = useState<'upload' | 'preview' | 'text'>('upload')
@@ -267,9 +268,7 @@ const FileUploadDemo = () => {
       setShowPreview(true)
       setCurrentStep('preview')
       
-      // 새로운 오디오 엘리먼트 생성
-      const audio = new Audio(url)
-      setAudioElement(audio)
+      // 오디오 엘리먼트는 ref 한 개만 사용
       setIsPlaying(false)
       setCurrentTime(0)
       setDuration(0)
@@ -305,9 +304,23 @@ const FileUploadDemo = () => {
   const startRecording = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const recorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm;codecs=opus'
+      const preferredMimeTypes = [
+        'audio/mp4;codecs=aac',
+        'audio/webm;codecs=opus',
+        'audio/webm'
+      ]
+      const supportedMime = preferredMimeTypes.find((type) => {
+        try {
+          return typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(type)
+        } catch {
+          return false
+        }
       })
+
+      const recorder = supportedMime
+        ? new MediaRecorder(stream, { mimeType: supportedMime })
+        : new MediaRecorder(stream)
+      setRecordingMime(recorder.mimeType || supportedMime || null)
       
       const chunks: Blob[] = []
       
@@ -318,7 +331,8 @@ const FileUploadDemo = () => {
       }
       
       recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'audio/webm' })
+        const effectiveType = recordingMime || recorder.mimeType || 'audio/webm'
+        const blob = new Blob(chunks, { type: effectiveType })
         setRecordedAudioBlob(blob)
         setAudioChunks(chunks)
         setCurrentStep('preview')
@@ -342,7 +356,7 @@ const FileUploadDemo = () => {
       console.error('녹음을 시작할 수 없습니다:', error)
       setErrorMessage('마이크 권한이 필요합니다.')
     }
-  }, [])
+  }, [recordingMime])
 
   // 녹음 중지 함수
   const stopRecording = useCallback(() => {
@@ -381,9 +395,7 @@ const FileUploadDemo = () => {
       setAudioUrl(url)
       setShowPreview(true)
       
-      // 새로운 오디오 엘리먼트 생성
-      const audio = new Audio(url)
-      setAudioElement(audio)
+      // 오디오 엘리먼트는 ref 한 개만 사용
       setIsPlaying(false)
       setCurrentTime(0)
       setDuration(0)
@@ -401,9 +413,7 @@ const FileUploadDemo = () => {
     setShowPreview(true)
     setCurrentStep('preview')
     
-    // 새로운 오디오 엘리먼트 생성
-    const audio = new Audio(audioFile)
-    setAudioElement(audio)
+    // 오디오 엘리먼트는 ref 한 개만 사용
     setIsPlaying(false)
     setCurrentTime(0)
     setDuration(0)
@@ -445,13 +455,15 @@ const FileUploadDemo = () => {
     if (!recordedAudioBlob || !userId) return null
     
     try {
-      // Blob을 File 객체로 변환
-      const file = new File([recordedAudioBlob], `recorded_audio_${Date.now()}.webm`, {
-        type: 'audio/webm'
+      // Blob을 File 객체로 변환 (mime/확장자 정합성 유지)
+      const mime = recordedAudioBlob.type || recordingMime || 'audio/webm'
+      const ext = mime.includes('audio/mp4') ? 'm4a' : (mime.includes('audio/webm') ? 'webm' : 'webm')
+      const file = new File([recordedAudioBlob], `recorded_audio_${Date.now()}.${ext}`, {
+        type: mime
       })
       
       // Supabase Storage에 업로드
-      const fileName = `reference/${userId}/recorded_${Date.now()}.webm`
+      const fileName = `reference/${userId}/recorded_${Date.now()}.${ext}`
       const { error } = await supabase.storage
         .from('prototype')
         .upload(fileName, file, {
@@ -471,7 +483,7 @@ const FileUploadDemo = () => {
       setErrorMessage('녹음 오디오 업로드 중 오류가 발생했습니다.')
       return null
     }
-  }, [recordedAudioBlob, userId, supabase])
+  }, [recordedAudioBlob, userId, supabase, recordingMime])
 
 
 
@@ -529,7 +541,7 @@ const FileUploadDemo = () => {
     setAudioUrl(voice.ref_file_url);
     setShowPreview(true);
     setCurrentStep('preview');
-    setAudioElement(new Audio(voice.ref_file_url));
+    // 오디오 엘리먼트는 ref 한 개만 사용
     setIsPlaying(false);
     setCurrentTime(0);
     setDuration(0);
@@ -625,7 +637,7 @@ const FileUploadDemo = () => {
     setAudioUrl(voice.ref_file_url);
     setShowPreview(true);
     setCurrentStep('preview');
-    setAudioElement(new Audio(voice.ref_file_url));
+    // 오디오 엘리먼트는 ref 한 개만 사용
     setIsPlaying(false);
     setCurrentTime(0);
     setDuration(0);
@@ -847,8 +859,7 @@ const FileUploadDemo = () => {
     setAudioUrl(data.signedUrl);
     setShowPreview(true);
     setCurrentStep('preview');
-    const audio = new Audio(data.signedUrl);
-    setAudioElement(audio);
+    // 오디오 엘리먼트는 ref 한 개만 사용
     setIsPlaying(false);
     setCurrentTime(0);
     setDuration(0);
@@ -856,7 +867,7 @@ const FileUploadDemo = () => {
     setAudioChunks([]);
     setRecordingTime(0);
     // setShowUsedAudioList(false); // 이 상태는 제거됨
-  }, [supabase]);
+  }, [supabase])
 
   const props = useSupabaseUpload({
     bucketName: 'prototype',
@@ -884,6 +895,17 @@ const FileUploadDemo = () => {
     props.setFiles([])
     setSelectedPresetAudio(null)
   }, [restartRecording, props])
+
+  // 오디오 URL 변경 시 DOM 오디오 강제 로드 (iOS 호환)
+  useEffect(() => {
+    if (audioElement && audioUrl) {
+      try {
+        audioElement.load()
+      } catch {
+        // ignore
+      }
+    }
+  }, [audioElement, audioUrl])
 
   // 미리 선택된 오디오 선택 시 파일 업로드 초기화
   const handlePresetAudioSelectWithReset = useCallback((audioFile: string) => {
@@ -1295,7 +1317,7 @@ const FileUploadDemo = () => {
                       if (el) setAudioElement(el)
                     }}
                     src={audioUrl}
-                    preload="metadata"
+                    preload="auto"
                     style={{ display: 'none' }}
                   />
                 )}
