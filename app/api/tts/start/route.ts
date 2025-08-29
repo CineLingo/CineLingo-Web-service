@@ -31,8 +31,8 @@ export async function POST(request: NextRequest) {
       const status = usageData?.error_code === 'TERMS_REQUIRED' ? 403 : 429
       return NextResponse.json({
         error: usageData?.error_code || 'DAILY_LIMIT_EXCEEDED',
-        message: usageData?.message || '하루 20회 생성 한도를 초과했습니다. 내일 00:00(KST)에 초기화됩니다.',
-        used: usageData?.used ?? 20,
+        message: usageData?.message || '하루 15회 생성 한도를 초과했습니다. 내일 00:00(KST)에 초기화됩니다.',
+        used: usageData?.used ?? 15,
         remaining: usageData?.remaining ?? 0,
         reset_at: usageData?.reset_at,
       }, { status })

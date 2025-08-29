@@ -1418,9 +1418,9 @@ const FileUploadDemo = () => {
               </button>
               {/* 남은 횟수 배지 */}
               <div className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
-                {usageRemaining === null ? '남은 횟수 확인 중…' : `오늘 남은 생성 ${usageRemaining}/20`}
+                {usageRemaining === null ? '남은 횟수 확인 중…' : `오늘 남은 생성 ${usageRemaining}/15`}
                 {usageRemaining !== null && usageRemaining <= 0 && (
-                  <span className="block text-red-500 mt-1">하루 20회 한도를 초과했습니다. 내일 00:00(KST)에 초기화됩니다.</span>
+                  <span className="block text-red-500 mt-1">하루 15회 한도를 초과했습니다. 내일 00:00(KST)에 초기화됩니다.</span>
                 )}
               </div>
             </div>
