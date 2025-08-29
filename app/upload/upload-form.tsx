@@ -1432,7 +1432,7 @@ const FileUploadDemo = () => {
                   }}
                   placeholder="원하는 텍스트를 입력하세요... (최대 150자)"
                   maxLength={150}
-                  className="w-full h-24 px-3 sm:px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-sm sm:text-base"
+                  className="w-full h-24 px-3 sm:px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 text-base sm:text-base"
                 />
                 <div className="flex justify-end">
                   <span className={`text-xs ${gen_text.length >= 150 ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}>

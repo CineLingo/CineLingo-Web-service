@@ -137,3 +137,12 @@ html {
   }
 }
 
+/* iOS에서 입력 시 자동 확대 방지: 입력 요소 폰트를 16px 이상으로 고정 */
+@supports (-webkit-touch-callout: none) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
