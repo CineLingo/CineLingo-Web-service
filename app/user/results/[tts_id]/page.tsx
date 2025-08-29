@@ -20,7 +20,7 @@ type TTSRequestDetail = {
   created_at: string
   updated_at: string
   error_log?: string
-  ref_audios?: { ref_file_url: string }[]
+  ref_audios?: { ref_file_url: string; ref_file_path?: string }[]
   gen_audios?: { 
     gen_file_url: string; 
     gen_file_path: string;
@@ -91,7 +91,7 @@ export default function TTSResultDetailPage() {
     if (data.reference_id) {
       const { data: refAudio } = await supabase
         .from('ref_audios')
-        .select('ref_file_url')
+        .select('ref_file_url, ref_file_path')
         .eq('ref_id', data.reference_id)
         .single()
       refAudioData = refAudio ? [refAudio] : null;
@@ -263,6 +263,7 @@ export default function TTSResultDetailPage() {
 
   const statusInfo = getStatusInfo(ttsRequest.status)
   const refText = ttsRequest.gen_audios?.[0]?.ref_text_while_gen ?? ttsRequest.ref_text_at_request
+  const isPresetRef = ttsRequest.ref_audios?.[0]?.ref_file_path?.toLowerCase().startsWith('preset_audio/') === true
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
@@ -404,7 +405,7 @@ export default function TTSResultDetailPage() {
               </div>
               
               {/* 참조 음성 공유 버튼 */}
-              {ttsRequest.reference_id && (
+              {ttsRequest.reference_id && !isPresetRef && (
                 <div className="mt-4 flex items-center justify-center">
                   <ShareRefButton
                     refId={ttsRequest.reference_id}
