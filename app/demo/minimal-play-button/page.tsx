@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react'
 import MinimalPlayButton from '@/components/MinimalPlayButton'
-import HomeButton from '@/components/home-button'
 
 export default function MinimalPlayButtonDemoPage() {
   const [playingStates, setPlayingStates] = useState<{ [key: string]: boolean }>({
@@ -23,7 +22,6 @@ export default function MinimalPlayButtonDemoPage() {
 
   return (
     <div className="max-w-4xl mx-auto mt-8 p-8">
-      <HomeButton variant="floating" />
       
       <h1 className="text-3xl font-bold mb-8 text-gray-900 dark:text-gray-100">
         Minimal Play Button

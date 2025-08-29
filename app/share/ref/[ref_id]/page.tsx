@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/client'
 import { ArrowLeft, Share2, Plus, Mic, User } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import HomeButton from '@/components/home-button'
 import { Button } from '@/components/ui/button'
 import { NavTheme } from '@/components/nav-theme'
 
@@ -266,7 +265,7 @@ export default function ShareRefPage() {
     return (
       <div className="min-h-screen bg-white dark:bg-gray-900">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
-          <HomeButton variant="floating" />
+          
           
           <div className="text-center py-12">
             <div className="mb-6">
@@ -291,7 +290,7 @@ export default function ShareRefPage() {
     <div className="min-h-screen bg-white dark:bg-gray-900">
       <NavTheme theme="upload" />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
-        <HomeButton variant="floating" />
+        
         
         {/* 헤더 */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">

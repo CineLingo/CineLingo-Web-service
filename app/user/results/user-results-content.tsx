@@ -6,12 +6,12 @@ import ProfileAvatarUploader from "@/components/ProfileAvatarUploader";
 import ShareButtonCompact from "@/components/ShareButtonCompact";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { XCircle, Clock, AlertCircle, Mic, RefreshCw, CheckCircle, Volume2, Download } from "lucide-react";
-import HomeButton from "@/components/home-button";
+import { XCircle, Clock, AlertCircle, Mic, RefreshCw, CheckCircle, Volume2, Download, Check } from "lucide-react";
 import Link from "next/link";
 import { Eye } from "lucide-react";
 import AudioPlayer from "@/components/AudioPlayer";
 import ShareRefButton from "@/components/ShareRefButton";
+import FeedbackSheet from "@/components/feedback/FeedbackSheet";
 
 type TTSRequestRow = {
   request_id: string;
@@ -35,6 +35,95 @@ type TTSRequestRow = {
   }[];
   ref_audios?: { ref_file_url: string; ref_text: string; ref_duration: number }[] | null;
 };
+
+function FeedbackButton({ ttsId }: { ttsId: string }) {
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [mode, setMode] = useState<'create' | 'edit'>('create')
+  const [initial, setInitial] = useState<{ id?: string; rating_overall?: number; comment?: string } | undefined>(undefined)
+
+  // 최초 마운트 시 피드백 존재 여부 확인
+  const refreshFeedbackState = useCallback(async () => {
+    const res = await fetch(`/api/feedback?tts_id=${encodeURIComponent(ttsId)}`)
+    if (res.ok) {
+      const data = await res.json()
+      if (data?.exists && data?.feedback) {
+        setMode('edit')
+        setInitial({ id: data.feedback.id, rating_overall: data.feedback.rating_overall, comment: data.feedback.comment })
+      } else {
+        setMode('create')
+        setInitial(undefined)
+      }
+    }
+  }, [ttsId])
+
+  useEffect(() => {
+    let mounted = true
+    const check = async () => {
+      try {
+        setLoading(true)
+        if (mounted) {
+          await refreshFeedbackState()
+        }
+      } finally {
+        if (mounted) setLoading(false)
+      }
+    }
+    check()
+    return () => { mounted = false }
+  }, [ttsId, refreshFeedbackState])
+
+  const openSheet = useCallback(async () => {
+    try {
+      setOpen(true)
+      if (initial || mode === 'edit') return
+      setLoading(true)
+      const res = await fetch(`/api/feedback?tts_id=${encodeURIComponent(ttsId)}`)
+      if (res.ok) {
+        const data = await res.json()
+        if (data?.exists && data?.feedback) {
+          setMode('edit')
+          setInitial({ id: data.feedback.id, rating_overall: data.feedback.rating_overall, comment: data.feedback.comment })
+        } else {
+          setMode('create')
+          setInitial(undefined)
+        }
+      }
+    } finally {
+      setLoading(false)
+    }
+  }, [ttsId, initial, mode])
+
+  const hasFeedback = mode === 'edit' && !!initial?.id
+
+  return (
+    <>
+      <button
+        onClick={openSheet}
+        disabled={loading}
+        className={`${hasFeedback
+          ? 'h-12 w-12 sm:h-11 sm:w-11 flex items-center justify-center bg-blue-50/60 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors disabled:opacity-60 disabled:cursor-not-allowed'
+          : 'px-3 h-12 sm:h-11 flex items-center justify-center gap-2 border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 bg-blue-50/60 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors text-sm disabled:opacity-60 disabled:cursor-not-allowed whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-700'
+        }`}
+        title={hasFeedback ? "피드백 완료" : "피드백"}
+      >
+        {hasFeedback ? <Check size={18} /> : <span className="text-sm">{loading ? '열기 중…' : '피드백'}</span>}
+      </button>
+      <FeedbackSheet
+        ttsId={ttsId}
+        open={open}
+        onClose={() => setOpen(false)}
+        onSubmitted={() => {
+          // 제출 후 즉시 상태 반영
+          setMode('edit')
+          void refreshFeedbackState()
+        }}
+        mode={mode}
+        initial={initial}
+      />
+    </>
+  )
+}
 
 export default function UserResultsContent() {
   const [userId, setUserId] = useState<string | null>(null)
@@ -354,7 +443,6 @@ export default function UserResultsContent() {
         {/* 헤더 영역 */}
         <div className="flex items-center justify-between mb-4 sm:mb-6">
           <div className="flex items-center gap-4">
-            <HomeButton variant="minimal" />
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">보이스북</h1>
           </div>
           <button
@@ -503,7 +591,6 @@ export default function UserResultsContent() {
       {/* 헤더 영역 */}
       <div className="flex items-center justify-between mb-4 sm:mb-6">
         <div className="flex items-center gap-4">
-          <HomeButton variant="minimal" />
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">보이스북</h1>
         </div>
         <button
@@ -689,9 +776,9 @@ export default function UserResultsContent() {
                    )}
                   </div>
 
-                  {/* 버튼 영역 */}
-                  <div className="flex items-center justify-between gap-2">
-                    {/* 다운로드 버튼 또는 진행 중 표시 */}
+                  {/* 버튼 영역: 왼쪽(다운/상태) 가변, 오른쪽 고정(피드백 최소폭, 공유 아이콘, 상세 아이콘) */}
+                  <div className="flex items-center gap-2">
+                    {/* 다운 버튼 또는 진행/실패 표시 (flex-1로 남은 공간 모두 차지) */}
                     {row.status === 'processing' || row.status === 'in_progress' || row.status === 'pending' ? (
                       <div className="flex-1 h-12 sm:h-11 flex items-center justify-center gap-2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-sm rounded-lg">
                         <RefreshCw size={16} className="animate-spin" />
@@ -726,15 +813,17 @@ export default function UserResultsContent() {
                         title="음성 파일 다운로드"
                       >
                         <Download size={16} />
-                        <span>다운로드</span>
+                        <span>다운</span>
                       </button>
                     )}
-                    
-                    {/* 공유 버튼 */}
-                    <ShareButtonCompact
-                      ttsId={row.request_id}
-                    />
-                    
+
+                    {/* 피드백 버튼: 텍스트가 보이는 최소한의 크기 (flex-grow 없음) */}
+                    <FeedbackButton ttsId={row.request_id} />
+
+                    {/* 공유 버튼 (기존 아이콘형 유지, 오른쪽 끝) */}
+                    <ShareButtonCompact ttsId={row.request_id} />
+
+                    {/* 상세보기 (기존 아이콘형 유지, 가장 마지막) */}
                     <Link
                       href={`/user/results/${row.request_id}`}
                       className="h-12 w-12 sm:h-11 sm:w-11 flex items-center justify-center bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded-lg transition-colors"

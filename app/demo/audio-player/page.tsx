@@ -3,7 +3,6 @@
 import React from 'react'
 import AudioPlayer from '@/components/AudioPlayer'
 import AudioPlayerWithRealWaveform from '@/components/AudioPlayerWithRealWaveform'
-import HomeButton from '@/components/home-button'
 
 export default function AudioPlayerDemoPage() {
   // 샘플 오디오 URL (실제 오디오 파일로 교체 필요)
@@ -11,7 +10,6 @@ export default function AudioPlayerDemoPage() {
 
   return (
     <div className="max-w-4xl mx-auto mt-8 p-8">
-      <HomeButton variant="floating" />
       
       <h1 className="text-3xl font-bold mb-8 text-gray-900 dark:text-gray-100">
         오디오 플레이어 데모

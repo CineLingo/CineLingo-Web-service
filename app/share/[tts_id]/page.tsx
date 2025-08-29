@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/client'
 import { ArrowLeft, Play, Pause, Volume2, Share2, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import HomeButton from '@/components/home-button'
 import { Button } from '@/components/ui/button'
 import { NavTheme } from '@/components/nav-theme'
 
@@ -229,7 +228,7 @@ export default function SharePage() {
   if (loading) return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <HomeButton variant="floating" />
+        
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 bg-gradient-to-r from-blue-600 to-purple-600 mx-auto"></div>
@@ -243,7 +242,7 @@ export default function SharePage() {
   if (error || !ttsRequest) return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <HomeButton variant="floating" />
+        
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <h1 className="text-xl sm:text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">오류</h1>
@@ -264,7 +263,6 @@ export default function SharePage() {
     <div className="min-h-screen bg-white dark:bg-gray-900">
       <NavTheme theme="upload" />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
-        <HomeButton variant="floating" />
         
         {/* 헤더 */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">

@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/client'
 import { Download, ArrowLeft, Clock, CheckCircle, XCircle, AlertCircle, MessageSquare } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import HomeButton from '@/components/home-button'
 import { NavTheme } from '@/components/nav-theme'
 import dynamic from 'next/dynamic'
 import ShareButton from '@/components/ShareButton'
@@ -53,6 +52,7 @@ export default function TTSResultDetailPage() {
   )
   const [showFeedback, setShowFeedback] = useState(false)
   const [feedbackState, setFeedbackState] = useState<{ exists: boolean; id?: string; initial?: FeedbackInitial } | null>(null)
+  const feedbackLoading = feedbackState === null
 
   // 로그인한 사용자 정보 가져오기
   useEffect(() => {
@@ -267,7 +267,6 @@ export default function TTSResultDetailPage() {
   if (loading) return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <HomeButton variant="floating" />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 bg-gradient-to-r from-blue-600 to-purple-600 mx-auto"></div>
@@ -281,7 +280,6 @@ export default function TTSResultDetailPage() {
   if (error || !ttsRequest) return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <HomeButton variant="floating" />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center">
             <h1 className="text-xl sm:text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">오류</h1>
@@ -416,11 +414,12 @@ export default function TTSResultDetailPage() {
             <div className="mt-3">
               <button
                 onClick={() => setShowFeedback(true)}
-                className="w-full h-12 sm:h-12 rounded-lg border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 bg-blue-50/60 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-sm sm:text-base font-semibold shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-700"
+                disabled={feedbackLoading}
+                className="w-full h-12 sm:h-12 rounded-lg border border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 bg-blue-50/60 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 disabled:opacity-60 disabled:cursor-not-allowed text-sm sm:text-base font-semibold shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300 dark:focus:ring-blue-700"
               >
                 <span className="inline-flex items-center justify-center gap-2">
                   <MessageSquare size={16} />
-                  {feedbackState?.exists ? '피드백 수정하기' : '피드백 남기기'}
+                  {feedbackLoading ? '피드백 확인 중…' : (feedbackState?.exists ? '피드백 수정하기' : '피드백 남기기')}
                 </span>
               </button>
             </div>

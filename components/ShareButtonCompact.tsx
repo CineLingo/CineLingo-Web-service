@@ -6,11 +6,13 @@ import { Share2, X } from 'lucide-react'
 interface ShareButtonCompactProps {
   ttsId: string
   className?: string
+  label?: string
 }
 
 export default function ShareButtonCompact({ 
   ttsId, 
-  className = ""
+  className = "",
+  label
 }: ShareButtonCompactProps) {
   const [showModal, setShowModal] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -38,10 +40,13 @@ export default function ShareButtonCompact({
     <>
       <button
         onClick={handleShareClick}
-        className={`h-12 w-12 sm:h-11 sm:w-11 flex items-center justify-center bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded-lg transition-colors ${className}`}
+        className={`${label 
+          ? 'w-full h-12 sm:h-11 px-4 flex items-center justify-center bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg transition-colors'
+          : 'h-12 w-12 sm:h-11 sm:w-11 flex items-center justify-center bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 rounded-lg transition-colors'
+        } ${className}`}
         title="공유하기"
       >
-        <Share2 size={16} />
+        {label ? <span className="text-sm">{label}</span> : <Share2 size={16} />}
       </button>
 
       {/* 공유 모달 */}

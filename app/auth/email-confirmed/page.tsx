@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, ArrowRight, Loader2 } from "lucide-react";
-import HomeButton from "@/components/home-button";
+ 
 import { createClient } from "@/lib/supabase/client";
 import { type EmailOtpType } from "@supabase/supabase-js";
 
@@ -233,7 +233,7 @@ function EmailConfirmedContent() {
   if (isProcessing) {
     return (
       <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-        <HomeButton variant="floating" />
+        
         <div className="w-full max-w-md">
           <Card className="text-center">
             <CardHeader>
@@ -256,7 +256,7 @@ function EmailConfirmedContent() {
   if (error) {
     return (
       <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-        <HomeButton variant="floating" />
+        
         <div className="w-full max-w-md">
           <Card className="text-center">
             <CardHeader>
@@ -286,7 +286,7 @@ function EmailConfirmedContent() {
 
   return (
     <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-      <HomeButton variant="floating" />
+      
       <div className="w-full max-w-md">
         <Card className="text-center">
           <CardHeader>
@@ -336,7 +336,7 @@ export default function EmailConfirmedPage() {
   return (
     <Suspense fallback={
       <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-        <HomeButton variant="floating" />
+        
         <div className="w-full max-w-md">
           <Card className="text-center">
             <CardHeader>
