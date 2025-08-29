@@ -18,6 +18,14 @@ function isValidShortText(value: unknown, max = 140): value is string | undefine
   return value.length <= max;
 }
 
+function getErrorCode(err: unknown): string | undefined {
+  if (err && typeof err === 'object' && 'code' in (err as Record<string, unknown>)) {
+    const code = (err as { code?: unknown }).code;
+    return typeof code === 'string' ? code : undefined;
+  }
+  return undefined;
+}
+
 export async function POST(req: Request) {
   try {
     const supabase = await createServerSupabase();
@@ -65,7 +73,7 @@ export async function POST(req: Request) {
 
     if (error) {
       // Unique violation usually returns Postgres code 23505, sometimes surfaced as status 409
-      const code = (error as any).code as string | undefined;
+      const code = getErrorCode(error);
       if (code === "23505" || status === 409 || (error.message && /duplicate key|unique/i.test(error.message))) {
         return NextResponse.json({ message: "Feedback already exists for this tts_id" }, { status: 409 });
       }
@@ -73,7 +81,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ id: data.id }, { status: 201 });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ message: "Unexpected error" }, { status: 500 });
   }
 }

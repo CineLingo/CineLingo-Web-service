@@ -48,10 +48,10 @@ export default function FeedbackSheet({ ttsId, open, onClose, onSubmitted, mode 
       setSubmitting(false)
     }
     if (open && initial) {
-      setRatings({ rating_overall: (initial as any)?.rating_overall || 0 })
+      setRatings({ rating_overall: (initial?.rating_overall ?? 0) })
       setComment(initial.comment ?? '')
     }
-  }, [open])
+  }, [open, initial])
 
   const handleSubmit = useCallback(async () => {
     if (disabled) return
@@ -90,7 +90,7 @@ export default function FeedbackSheet({ ttsId, open, onClose, onSubmitted, mode 
     } finally {
       setSubmitting(false)
     }
-  }, [disabled, ratings, comment, ttsId, onClose, onSubmitted])
+  }, [disabled, ratings, comment, ttsId, onClose, onSubmitted, mode, initial?.id])
 
   if (!open) return null
 

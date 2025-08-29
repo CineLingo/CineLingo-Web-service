@@ -34,6 +34,11 @@ type TTSRequestDetail = {
   }[]
 }
 
+type FeedbackInitial = {
+  rating_overall?: number
+  comment?: string
+}
+
 export default function TTSResultDetailPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [ttsRequest, setTtsRequest] = useState<TTSRequestDetail | null>(null)
@@ -47,7 +52,7 @@ export default function TTSResultDetailPage() {
     []
   )
   const [showFeedback, setShowFeedback] = useState(false)
-  const [feedbackState, setFeedbackState] = useState<{ exists: boolean; id?: string; initial?: any } | null>(null)
+  const [feedbackState, setFeedbackState] = useState<{ exists: boolean; id?: string; initial?: FeedbackInitial } | null>(null)
 
   // 로그인한 사용자 정보 가져오기
   useEffect(() => {
