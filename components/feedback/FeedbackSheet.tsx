@@ -50,12 +50,20 @@ export default function FeedbackSheet(props: Props) {
     if (!open) {
       setError(null)
       setSubmitting(false)
+      return
     }
-    if (open && initial) {
+    // 시트가 열릴 때: 사이트 피드백은 항상 신규 입력 상태로 초기화
+    if (props.variant === 'site') {
+      setRatings({ rating_overall: 0 })
+      setComment('')
+      return
+    }
+    // TTS 피드백: 전달된 initial이 있으면 채움
+    if (initial) {
       setRatings({ rating_overall: (initial?.rating_overall ?? 0) })
       setComment(initial.comment ?? '')
     }
-  }, [open, initial])
+  }, [open, initial, props.variant])
 
   const handleSubmit = useCallback(async () => {
     if (disabled) return
