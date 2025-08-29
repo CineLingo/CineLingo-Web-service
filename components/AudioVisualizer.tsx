@@ -1,18 +1,17 @@
 
 'use client'
 
-import React, { memo, useEffect, useMemo, useRef, useState } from 'react'
+import React, { memo, useEffect, useRef, useState } from 'react'
 import clsx from 'clsx'
 import Lottie, { LottieRefCurrentProps } from 'lottie-react'
 
 type AudioVisualizerProps = {
   active: boolean
-  barCount?: number
   className?: string
   src?: string // lottie json 경로. 기본: /lottie/music-visualizer.json
 }
 
-const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ active, barCount = 12, className, src = '/lottie/music-visualizer.json' }) => {
+const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ active, className, src = '/lottie/music-visualizer.json' }) => {
   const [animationData, setAnimationData] = useState<Record<string, unknown> | null>(null)
   const lottieRef = useRef<LottieRefCurrentProps>(null)
 
@@ -47,7 +46,7 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ active, barCount = 12
     }
   }, [active, animationData])
 
-  const bars = useMemo(() => Array.from({ length: barCount }), [barCount])
+  // 폴백 막대 데이터 제거 (사용 안 함)
 
   if (animationData) {
     return (
@@ -64,9 +63,7 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({ active, barCount = 12
   }
 
   // CSS 폴백 제거: 초기 로딩 시 시각적 깜빡임 방지용 빈 컨테이너(레이아웃만 유지)
-  return (
-    <div className={clsx('h-10', className)} aria-hidden />
-  )
+  return <div className={clsx('h-10', className)} aria-hidden />
 }
 
 export default memo(AudioVisualizer)

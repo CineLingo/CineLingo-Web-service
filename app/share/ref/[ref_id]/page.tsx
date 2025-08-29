@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Share2, Plus, Mic, User, Play, Pause, Volume2 } from 'lucide-react'
+import { ArrowLeft, Share2, Plus, Mic, Play, Pause, Volume2 } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'

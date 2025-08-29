@@ -22,7 +22,7 @@ export default function AudioPlayerWithRealWaveform({
   const [progress, setProgress] = useState(0)
   const [duration, setDuration] = useState(0)
   const [volume, setVolume] = useState(1)
-  const [waveformData, setWaveformData] = useState<number[]>([])
+  const [, setWaveformData] = useState<number[]>([])
   const audioRef = useRef<HTMLAudioElement>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
 

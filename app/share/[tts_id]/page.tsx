@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Play, Pause, Volume2, Share2, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Play, Pause, Volume2, Share2 } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -155,7 +155,7 @@ export default function SharePage() {
         await el.play()
       }
       setIsPlaying(!isPlaying)
-    } catch (e) {
+    } catch {
       // 재생 실패는 조용히 무시 (브라우저 정책)
       // console.error('오디오 재생 실패:', e)
     }

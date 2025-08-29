@@ -114,18 +114,7 @@ export default function AudioPlayer({
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  // 웨이브폼 데이터 생성 (더미 데이터) - 모바일에서는 더 적은 바
-  const generateWaveformData = (count: number) => {
-    // 일관된 웨이브폼을 위해 고정된 시드 사용
-    const seed = 12345 // 고정 시드
-    const data = []
-    for (let i = 0; i < count; i++) {
-      // 간단한 의사 랜덤 함수
-      const x = Math.sin(i * 0.5 + seed) * 0.5 + 0.5
-      data.push(x * 0.8 + 0.2)
-    }
-    return data
-  }
+  // (제거) 더미 웨이브폼 함수 미사용 정리
 
   // 화면 크기 상태
   const [isMobile, setIsMobile] = useState(false)
@@ -142,8 +131,7 @@ export default function AudioPlayer({
     return () => window.removeEventListener('resize', checkScreenSize)
   }, [])
 
-  // 화면 크기에 따라 웨이브폼 바 개수 조정
-  const waveformData = generateWaveformData(isMobile ? 30 : 50)
+  // 화면 크기에 따라 웨이브폼 바 개수 조정 (미사용 변수 제거)
 
   return (
     <div 
