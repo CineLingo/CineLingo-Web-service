@@ -48,7 +48,8 @@ export async function GET(request: NextRequest) {
         console.warn('인증 후 signOut 실패:', signOutError);
       }
 
-      return NextResponse.redirect(`${origin}/auth/login?verified=1`);
+      // 이메일 인증 완료 안내 페이지로 이동하여 화면을 실제로 표시
+      return NextResponse.redirect(`${origin}/auth/email-confirmed?verified=1`);
     } else {
       return NextResponse.redirect(`${origin}/auth/error?error=${encodeURIComponent(`이메일 인증에 실패했습니다: ${error.message}`)}`);
     }
