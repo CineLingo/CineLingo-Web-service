@@ -17,6 +17,10 @@ export async function GET(request: NextRequest) {
       // 기존 구현과 호환: code 분기는 복구 플로우 우선 처리
       return NextResponse.redirect(`${origin}/auth/update-password`);
     } else {
+      // 크로스 앱으로 열려 code_verifier가 없어 실패하는 케이스 폴백 처리
+      if (error.message.toLowerCase().includes('both auth code and code verifier')) {
+        return NextResponse.redirect(`${origin}/auth/login?verified=1`);
+      }
       return NextResponse.redirect(`${origin}/auth/error?error=${encodeURIComponent(`코드 교환에 실패했습니다: ${error.message}`)}`);
     }
   }
