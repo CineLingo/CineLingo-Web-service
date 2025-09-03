@@ -1,10 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { type EmailOtpType } from "@supabase/supabase-js";
-import { redirect } from "next/navigation";
-import { type NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
+  const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
@@ -16,9 +15,9 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
       // 기존 구현과 호환: code 분기는 복구 플로우 우선 처리
-      redirect('/auth/update-password');
+      return NextResponse.redirect(`${origin}/auth/update-password`);
     } else {
-      redirect(`/auth/error?error=코드 교환에 실패했습니다: ${error.message}`);
+      return NextResponse.redirect(`${origin}/auth/error?error=${encodeURIComponent(`코드 교환에 실패했습니다: ${error.message}`)}`);
     }
   }
 
@@ -34,7 +33,7 @@ export async function GET(request: NextRequest) {
     if (!error) {
       // recovery 타입은 즉시 비밀번호 재설정으로 이동
       if (type === 'recovery') {
-        redirect('/auth/update-password');
+        return NextResponse.redirect(`${origin}/auth/update-password`);
       }
 
       // 자동 로그인 의존 제거: 무조건 로그아웃 후 로그인 페이지로 안내
@@ -45,12 +44,12 @@ export async function GET(request: NextRequest) {
         console.warn('인증 후 signOut 실패:', signOutError);
       }
 
-      redirect('/auth/login?verified=1');
+      return NextResponse.redirect(`${origin}/auth/login?verified=1`);
     } else {
-      redirect(`/auth/error?error=이메일 인증에 실패했습니다: ${error.message}`);
+      return NextResponse.redirect(`${origin}/auth/error?error=${encodeURIComponent(`이메일 인증에 실패했습니다: ${error.message}`)}`);
     }
   } else {
     // 파라미터가 없을 때는 에러 안내 페이지로 이동
-    redirect(`/auth/error?error=No token hash or type`);
+    return NextResponse.redirect(`${origin}/auth/error?error=${encodeURIComponent('No token hash or type')}`);
   }
 }
