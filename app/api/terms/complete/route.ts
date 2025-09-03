@@ -59,71 +59,115 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // 최적화: 병렬 처리로 성능 개선
-    const [dbResult, metadataResult] = await Promise.allSettled([
-      // 1. 데이터베이스 함수 호출
-      supabase.rpc('complete_terms_agreement', {
-        user_uuid: user.id,
-        terms_agreed,
-        voice_agreed,
-        copyright_agreed,
-        ai_agreed
-      }),
-      
-      // 2. 사용자 메타데이터 업데이트 (병렬로 실행)
-      supabase.auth.updateUser({
-        data: {
-          terms_agreed: terms_agreed,
-          voice_agreed: voice_agreed,
-          copyright_agreed: copyright_agreed,
-          ai_agreed: ai_agreed
-        }
-      })
-    ]);
-
-    // DB 결과 확인
-    if (dbResult.status === 'rejected' || dbResult.value.error) {
-      const error = dbResult.status === 'rejected' ? dbResult.reason : dbResult.value.error;
-      console.error('약관 동의 완료 오류:', error);
-      return NextResponse.json(
-        { error: "약관 동의 처리 중 오류가 발생했습니다: " + (error?.message || error) },
-        { status: 500 }
-      );
+    // 1) 사용자 메타데이터에 약관 동의 상태 반영 (문자열 아닌 boolean 저장)
+    const { error: metaError1 } = await supabase.auth.updateUser({
+      data: {
+        terms_agreed: Boolean(terms_agreed),
+        voice_agreed: Boolean(voice_agreed),
+        copyright_agreed: Boolean(copyright_agreed),
+        ai_agreed: Boolean(ai_agreed),
+      }
+    });
+    if (metaError1) {
+      console.warn('사용자 메타데이터 업데이트 실패:', metaError1.message);
     }
 
-    const { data } = dbResult.value;
-    
-    // 결과 확인
-    if (data && data.success) {
-      // 메타데이터 업데이트 결과 로깅 (실패해도 약관 동의는 성공으로 처리)
-      if (metadataResult.status === 'rejected' || metadataResult.value.error) {
-        console.warn('사용자 메타데이터 업데이트 실패 (약관 동의는 성공):', 
-          metadataResult.status === 'rejected' ? metadataResult.reason : metadataResult.value.error);
-      }
-
-      // 세션 갱신 (백그라운드에서 실행, 실패해도 리다이렉트 진행)
-      supabase.auth.refreshSession().catch(error => {
-        console.warn('서버 세션 갱신 실패 (약관 동의는 성공):', error);
-      });
-
-      // 리다이렉트할 URL 결정 (내부 경로 화이트리스트)
-      if (!redirectTo || typeof redirectTo !== 'string') {
-        redirectTo = '/';
-      }
-
-      // 내부 경로(`/`로 시작)만 허용. 그 외는 루트로 대체
-      const isInternalPath = redirectTo.startsWith('/');
-      const safePath = isInternalPath ? redirectTo : '/';
-
-      // 즉시 리다이렉트 (세션 갱신 대기하지 않음)
-      const redirectUrl = new URL(safePath, request.url);
-      return NextResponse.redirect(redirectUrl, 303);
-    } else {
-      return NextResponse.json(
-        { error: data?.error || "약관 동의 처리에 실패했습니다." },
-        { status: 500 }
-      );
+    // 2) 4개 public 테이블 upsert (온보딩 로직 인라인)
+    // users
+    const { error: usersError } = await supabase
+      .from('users')
+      .upsert({
+        user_id: user.id,
+        email: user.email,
+        display_name: '',
+        avatar_url: '',
+        auth_provider: true,
+        balance: 0,
+      }, { onConflict: 'user_id' });
+    if (usersError) {
+      return NextResponse.json({ error: `users upsert failed: ${usersError.message}` }, { status: 500 });
     }
+
+    // accounts
+    const { error: accountsError } = await supabase
+      .from('accounts')
+      .upsert({
+        email: user.email,
+        name: '',
+        usage: 0.0,
+      }, { onConflict: 'email' });
+    if (accountsError) {
+      return NextResponse.json({ error: `accounts upsert failed: ${accountsError.message}` }, { status: 500 });
+    }
+
+    // account_id 조회
+    const { data: accountData, error: accountQueryError } = await supabase
+      .from('accounts')
+      .select('account_id')
+      .eq('email', user.email)
+      .single();
+    if (accountQueryError || !accountData) {
+      return NextResponse.json({ error: `account_id fetch failed: ${accountQueryError?.message || 'not found'}` }, { status: 500 });
+    }
+    const accountId = accountData.account_id as string;
+
+    // user_to_account_mapping
+    const { error: mappingError } = await supabase
+      .from('user_to_account_mapping')
+      .upsert({
+        user_id: user.id,
+        account_id: accountId,
+      }, { onConflict: 'user_id,account_id' });
+    if (mappingError) {
+      return NextResponse.json({ error: `mapping upsert failed: ${mappingError.message}` }, { status: 500 });
+    }
+
+    // terms_agreement
+    const agreedAll = Boolean(terms_agreed && voice_agreed && copyright_agreed);
+    const { error: termsError } = await supabase
+      .from('terms_agreement')
+      .upsert({
+        account_id: accountId,
+        terms_version: '1.0',
+        agreed: agreedAll,
+        critical_keys: {
+          terms_agreed: Boolean(terms_agreed),
+          voice_agreed: Boolean(voice_agreed),
+          copyright_agreed: Boolean(copyright_agreed),
+          ai_agreed: Boolean(ai_agreed),
+        },
+      }, { onConflict: 'account_id' });
+    if (termsError) {
+      return NextResponse.json({ error: `terms upsert failed: ${termsError.message}` }, { status: 500 });
+    }
+
+    // 3) onboarded=true로 메타데이터 표시
+    const { error: metaError2 } = await supabase.auth.updateUser({
+      data: {
+        onboarded: true,
+        terms_agreed: true,
+        voice_agreed: true,
+        copyright_agreed: true,
+        ai_agreed: Boolean(ai_agreed),
+      }
+    });
+    if (metaError2) {
+      console.warn('사용자 메타데이터 onboarded 표시 실패:', metaError2.message);
+    }
+
+    // 세션 갱신 (백그라운드)
+    supabase.auth.refreshSession().catch(error => {
+      console.warn('서버 세션 갱신 실패:', error);
+    });
+
+    // 리다이렉트할 URL 결정 (내부 경로 화이트리스트)
+    if (!redirectTo || typeof redirectTo !== 'string') {
+      redirectTo = '/';
+    }
+    const isInternalPath = redirectTo.startsWith('/');
+    const safePath = isInternalPath ? redirectTo : '/';
+    const redirectUrl = new URL(safePath, request.url);
+    return NextResponse.redirect(redirectUrl, 303);
 
   } catch (error) {
     console.error('약관 동의 API 오류:', error);
