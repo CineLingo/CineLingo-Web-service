@@ -85,7 +85,7 @@ export function SignUpForm({
     try {
       // 현재 도메인을 기반으로 리다이렉트 URL 생성
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-      const redirectUrl = `${baseUrl}/auth/email-confirmed`;
+      const redirectUrl = `${baseUrl}/auth/confirm`;
         
       const { error } = await supabase.auth.signUp({
         email,
@@ -195,9 +195,9 @@ export function SignUpForm({
             // 약관 동의 후: 실제 회원가입 폼
             <div className="space-y-4">
               <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-amber-900 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200">
-                <p className="text-sm font-medium">동일한 브라우저에서 이메일 인증을 완료해주세요</p>
+                <p className="text-sm font-medium">이메일 인증 후 로그인하면 가입이 마무리됩니다</p>
                 <p className="mt-1 text-xs leading-relaxed">
-                  예) 아이폰에서 크롬으로 회원가입을 시작했다면, <strong>같은 크롬 앱</strong>에서 네이버 메일에 로그인한 뒤 인증 메일의 링크를 눌러주세요. 다른 앱(사파리/네이버앱 등)으로 열면 인증이 실패할 수 있어요.
+                  메일 앱이나 외부 브라우저에서 인증을 완료해도 됩니다. 인증 후 <strong>로그인</strong>하면 초기 설정이 자동으로 완료됩니다.
                 </p>
               </div>
               {/* 약관 동의 완료 알림 및 재동의 버튼 */}

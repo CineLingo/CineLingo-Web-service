@@ -6,6 +6,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { SiteNavbar } from "@/components/site-navbar";
 import { ScrollRestorer } from "@/components/scroll-restorer";
+import OnboardInitializer from "@/components/OnboardInitializer";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -59,6 +60,7 @@ export default function RootLayout({
         >
           <SiteNavbar />
           <ScrollRestorer />
+          <OnboardInitializer />
           {children}
         </ThemeProvider>
         <Analytics />

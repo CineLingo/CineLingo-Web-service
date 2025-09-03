@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle, ArrowRight, Loader2 } from "lucide-react";
  
 import { createClient } from "@/lib/supabase/client";
-import { type EmailOtpType } from "@supabase/supabase-js";
 
 function EmailConfirmedContent() {
   const router = useRouter();
@@ -20,182 +19,17 @@ function EmailConfirmedContent() {
   useEffect(() => {
     const processEmailConfirmation = async () => {
       try {
-        const supabase = createClient();
-        
-        // URL 파라미터에서 토큰 정보 확인
+        // 구 링크 호환: token_hash/type이 있으면 /auth/confirm로 서버 처리 위임
         const tokenHash = searchParams.get('token_hash');
-        const type = searchParams.get('type');
-        
-        // 토큰이 있는 경우 이메일 인증 처리
-        if (tokenHash && type) {
-          const { error: verifyError } = await supabase.auth.verifyOtp({
-            type: type as EmailOtpType,
-            token_hash: tokenHash,
-          });
-          
-          if (verifyError) {
-            setError(`이메일 인증에 실패했습니다: ${verifyError.message}`);
-            setIsProcessing(false);
-            return;
-          }
-          
-          // 이메일 인증 완료 후 잠시 대기 (auth.users 테이블 업데이트 대기)
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-        
-        // 사용자 정보 가져오기
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
-        if (userError || !user) {
-          setError('사용자 정보를 가져올 수 없습니다.');
-          setIsProcessing(false);
+        const otpType = searchParams.get('type');
+        if (tokenHash && otpType) {
+          window.location.replace(`/auth/confirm?token_hash=${encodeURIComponent(tokenHash)}&type=${encodeURIComponent(otpType)}`);
           return;
         }
-        
-        // 이메일 인증 상태 확인
-        if (!user.email_confirmed_at) {
-          // 잠시 더 대기 후 다시 확인
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          
-          const { data: { user: refreshedUser }, error: refreshError } = await supabase.auth.getUser();
-          if (refreshError || !refreshedUser) {
-            setError('사용자 정보를 새로고침할 수 없습니다.');
-            setIsProcessing(false);
-            return;
-          }
-          
-          if (!refreshedUser.email_confirmed_at) {
-            setError('이메일 인증이 완료되지 않았습니다. 다시 시도해주세요.');
-            setIsProcessing(false);
-            return;
-          }
-        }
-        
-        // 약관 동의 여부 확인 (user_metadata에서 확인)
-        const termsAgreed = user.user_metadata?.terms_agreed === true || 
-                           user.user_metadata?.terms_agreed === 'true' || 
-                           user.user_metadata?.terms_agreed === '1';
-        const voiceAgreed = user.user_metadata?.voice_agreed === true || 
-                           user.user_metadata?.voice_agreed === 'true' || 
-                           user.user_metadata?.voice_agreed === '1';
-        const copyrightAgreed = user.user_metadata?.copyright_agreed === true || 
-                               user.user_metadata?.copyright_agreed === 'true' || 
-                               user.user_metadata?.copyright_agreed === '1';
-        const aiAgreed = user.user_metadata?.ai_agreed === true || 
-                        user.user_metadata?.ai_agreed === 'true' || 
-                        user.user_metadata?.ai_agreed === '1';
-        
-        // 이메일 인증이 완료되고 약관 동의가 완료된 경우 public 테이블 생성
-        if (user.email_confirmed_at && termsAgreed && voiceAgreed && copyrightAgreed) {
-          try {
-            // 1. users 테이블에 insert
-            const { error: usersError } = await supabase
-              .from('users')
-              .upsert({
-                user_id: user.id,
-                email: user.email,
-                display_name: '',
-                avatar_url: '',
-                auth_provider: true,
-                balance: 0
-              }, { onConflict: 'user_id' });
-            
-            if (usersError) {
-              throw new Error(`users 테이블 생성 실패: ${usersError.message}`);
-            }
-            
-            // 2. accounts 테이블에 insert
-            const { error: accountsError } = await supabase
-              .from('accounts')
-              .upsert({
-                email: user.email,
-                name: '',
-                usage: 0.0
-              }, { onConflict: 'email' });
-            
-            if (accountsError) {
-              throw new Error(`accounts 테이블 생성 실패: ${accountsError.message}`);
-            }
-            
-            // 3. account_id 가져오기
-            const { data: accountData, error: accountQueryError } = await supabase
-              .from('accounts')
-              .select('account_id')
-              .eq('email', user.email)
-              .single();
-            
-            if (accountQueryError || !accountData) {
-              throw new Error(`account_id 조회 실패: ${accountQueryError?.message || 'account_id를 찾을 수 없습니다'}`);
-            }
-            
-            const accountId = accountData.account_id;
-            
-            // 4. user_to_account_mapping 테이블에 insert
-            const { error: mappingError } = await supabase
-              .from('user_to_account_mapping')
-              .upsert({
-                user_id: user.id,
-                account_id: accountId
-              }, { onConflict: 'user_id,account_id' });
-            
-            if (mappingError) {
-              throw new Error(`user_to_account_mapping 테이블 생성 실패: ${mappingError.message}`);
-            }
-            
-            // 5. terms_agreement 테이블에 insert
-            const { error: termsError } = await supabase
-              .from('terms_agreement')
-              .upsert({
-                account_id: accountId,
-                terms_version: '1.0',
-                agreed: true,
-                critical_keys: {
-                  terms_agreed: termsAgreed,
-                  voice_agreed: voiceAgreed,
-                  copyright_agreed: copyrightAgreed,
-                  ai_agreed: aiAgreed
-                }
-              }, { onConflict: 'account_id' });
-            
-            if (termsError) {
-              throw new Error(`terms_agreement 테이블 생성 실패: ${termsError.message}`);
-            }
-            
-            // 6. 사용자 메타데이터 업데이트 (미들웨어에서 약관 동의 상태 확인을 위해)
-            const { error: updateError } = await supabase.auth.updateUser({
-              data: {
-                terms_agreed: true,
-                voice_agreed: true,
-                copyright_agreed: true,
-                ai_agreed: aiAgreed
-              }
-            });
-            
-            if (updateError) {
-              throw new Error(`사용자 메타데이터 업데이트 실패: ${updateError.message}`);
-            }
-            
-            // 7. 세션 새로고침
-            const { error: refreshError } = await supabase.auth.refreshSession();
-            if (refreshError) {
-              console.warn('세션 새로고침 실패:', refreshError.message);
-            }
-            
-          } catch (error) {
-            setError(`회원가입 완료에 실패했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
-            setIsProcessing(false);
-            return;
-          }
-        } else if (!user.email_confirmed_at) {
-          setError('이메일 인증이 완료되지 않았습니다.');
-          setIsProcessing(false);
-          return;
-        } else {
-          setError('약관 동의가 완료되지 않았습니다. 회원가입을 다시 진행해주세요.');
-          setIsProcessing(false);
-          return;
-        }
-        
+
+        const supabase = createClient();
+        // 세션이 있을 수도, 없을 수도 있음. 이 페이지는 안내 전용으로 단순화
+        await supabase.auth.getUser();
         setIsProcessing(false);
         
         // 3초 카운트다운 후 자동 리다이렉트
@@ -261,9 +95,9 @@ function EmailConfirmedContent() {
           <Card className="text-center">
             <CardHeader>
               <div className="mb-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-left text-amber-900 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200">
-                <p className="text-sm font-medium">동일한 브라우저에서 이메일 인증을 완료해주세요</p>
+                <p className="text-sm font-medium">이메일 인증이 끝났다면 로그인해 주세요</p>
                 <p className="mt-1 text-xs leading-relaxed">
-                  예) 아이폰에서 크롬으로 회원가입을 시작했다면, <strong>같은 크롬 앱</strong>에서 네이버 메일에 로그인한 뒤 인증 메일의 링크를 눌러주세요. 다른 앱(사파리/네이버앱 등)으로 열면 인증이 실패할 수 있어요.
+                  메일 앱이나 외부 브라우저에서 인증해도 괜찮습니다. 로그인하면 가입이 마무리됩니다.
                 </p>
               </div>
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900">
