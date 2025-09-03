@@ -14,8 +14,14 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      // 기존 구현과 호환: code 분기는 복구 플로우 우선 처리
-      return NextResponse.redirect(`${origin}/auth/update-password`);
+      // code 플로우 성공: 이메일 인증/로그인 관련 세션 교환 성공
+      // 복구는 token_hash + type='recovery' 플로우에서만 처리하므로 여기선 안내 페이지로 이동
+      try {
+        await supabase.auth.signOut();
+      } catch (signOutError) {
+        console.warn('코드 교환 후 signOut 실패:', signOutError);
+      }
+      return NextResponse.redirect(`${origin}/auth/email-confirmed?verified=1`);
     } else {
       // 크로스 앱으로 열려 code_verifier가 없어 실패하는 케이스 폴백 처리
       if (error.message.toLowerCase().includes('both auth code and code verifier')) {
