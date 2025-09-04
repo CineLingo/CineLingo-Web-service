@@ -197,7 +197,7 @@ export function SignUpForm({
               <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-amber-900 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-200">
                 <p className="text-sm font-medium">이메일 인증 후 로그인하면 가입이 마무리됩니다</p>
                 <p className="mt-1 text-xs leading-relaxed">
-                  메일 앱이나 외부 브라우저에서 인증을 완료해도 됩니다. 인증 후 <strong>로그인</strong>하면 초기 설정이 자동으로 완료됩니다.
+                  메일 앱이나 외부 브라우저에서 인증을 완료해도 됩니다.
                 </p>
               </div>
               {/* 약관 동의 완료 알림 및 재동의 버튼 */}
