@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 
 /**
  * user_metadata에서 약관 동의 상태를 빠르게 확인하는 함수 (캐시 우선)
@@ -46,8 +47,26 @@ export async function assertUserTermsOrRedirect(userId: string, currentPath?: st
   const hasTermsInMetadata = checkUserTermsFromMetadata(user);
   
   if (hasTermsInMetadata) {
-    // user_metadata에 약관 동의 정보가 있으면 DB 확인 생략
-    return; // 성공적으로 통과
+    // user_metadata에 약관 동의 정보가 있으면 온보딩 상태 보정 후 통과
+    const onboarded = user.user_metadata?.onboarded === true ||
+                      user.user_metadata?.onboarded === 'true' ||
+                      user.user_metadata?.onboarded === '1';
+    if (!onboarded) {
+      // 서버에서 온보딩을 1회 시도 (쿠키 전달)
+      const cookieStore = await cookies();
+      const cookieHeader = cookieStore.getAll().map(c => `${c.name}=${c.value}`).join('; ');
+      const siteUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000');
+      try {
+        await fetch(`${siteUrl}/api/auth/onboard`, {
+          method: 'POST',
+          headers: { cookie: cookieHeader },
+          cache: 'no-store',
+        });
+      } catch {
+        // ignore; 페이지 렌더는 계속 진행
+      }
+    }
+    return;
   }
   
   // 2단계: DB에서 확인 (최적화된 단일 쿼리 사용)
@@ -63,6 +82,25 @@ export async function assertUserTermsOrRedirect(userId: string, currentPath?: st
     } else {
       // 이메일 회원가입 사용자는 이미 로그인된 상태
       redirect('/auth/email-confirmed');
+    }
+  }
+
+  // DB 기준 약관 동의가 확인되었지만, 메타데이터 onboarded가 없을 수 있으므로 1회 보정
+  const onboarded = user.user_metadata?.onboarded === true ||
+                    user.user_metadata?.onboarded === 'true' ||
+                    user.user_metadata?.onboarded === '1';
+  if (!onboarded) {
+    const cookieStore = await cookies();
+    const cookieHeader = cookieStore.getAll().map(c => `${c.name}=${c.value}`).join('; ');
+    const siteUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000');
+    try {
+      await fetch(`${siteUrl}/api/auth/onboard`, {
+        method: 'POST',
+        headers: { cookie: cookieHeader },
+        cache: 'no-store',
+      });
+    } catch {
+      // ignore
     }
   }
 }
