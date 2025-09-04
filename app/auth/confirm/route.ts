@@ -14,13 +14,7 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      // code 플로우 성공: 이메일 인증/로그인 관련 세션 교환 성공
-      // 복구는 token_hash + type='recovery' 플로우에서만 처리하므로 여기선 안내 페이지로 이동
-      try {
-        await supabase.auth.signOut();
-      } catch (signOutError) {
-        console.warn('코드 교환 후 signOut 실패:', signOutError);
-      }
+      // code 플로우 성공: 세션 교환(자동 로그인) 유지 후 안내 페이지로 이동
       return NextResponse.redirect(`${origin}/auth/email-confirmed?verified=1`);
     } else {
       // PKCE 관련 모든 실패 케이스는 안내 페이지로 폴백 처리
