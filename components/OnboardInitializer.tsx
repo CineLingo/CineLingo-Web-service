@@ -18,13 +18,31 @@ export default function OnboardInitializer() {
         } = await supabase.auth.getUser();
         if (!user) return;
 
-        const onboarded = user.user_metadata?.onboarded === true ||
-          user.user_metadata?.onboarded === "true" ||
-          user.user_metadata?.onboarded === "1";
+        const isTruthy = (v: unknown) => v === true || v === "true" || v === "1";
+        const onboarded = isTruthy(user.user_metadata?.onboarded);
         if (onboarded) return;
 
+        const provider = (user.app_metadata as { provider?: string } | undefined)?.provider;
+
+        if (provider === 'email') {
+          await fetch("/api/auth/onboard", { method: "POST" });
+          await supabase.auth.refreshSession();
+          return;
+        }
+
+        if (provider === 'google') {
+          const termsAgreed = isTruthy(user.user_metadata?.terms_agreed);
+          const voiceAgreed = isTruthy(user.user_metadata?.voice_agreed);
+          const copyrightAgreed = isTruthy(user.user_metadata?.copyright_agreed);
+          if (termsAgreed && voiceAgreed && copyrightAgreed) {
+            await fetch("/api/auth/onboard", { method: "POST" });
+            await supabase.auth.refreshSession();
+          }
+          return;
+        }
+
+        // 기타 프로바이더는 보수적으로 이메일과 동일 처리
         await fetch("/api/auth/onboard", { method: "POST" });
-        // 세션 리프레시로 메타데이터 반영
         await supabase.auth.refreshSession();
       } catch {
         // noop
