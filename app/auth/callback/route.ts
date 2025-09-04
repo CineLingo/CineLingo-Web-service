@@ -22,7 +22,7 @@ export async function GET(request: Request) {
         const user = userData.user;
         
         // 현재 사용자에 구글 ID가 연결되어 있으면 구글 OAuth 흐름으로 간주
-        const hasGoogleIdentity = Array.isArray((user as any).identities) && (user as any).identities.some((i: any) => i?.provider === 'google');
+        const hasGoogleIdentity = Array.isArray(user.identities) && user.identities.some((identity) => identity.provider === 'google');
         const isGoogleOAuth = user.app_metadata?.provider === 'google' || hasGoogleIdentity;
         
         if (isGoogleOAuth) {
