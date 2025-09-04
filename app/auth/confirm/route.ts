@@ -23,10 +23,18 @@ export async function GET(request: NextRequest) {
       }
       return NextResponse.redirect(`${origin}/auth/email-confirmed?verified=1`);
     } else {
-      // 크로스 앱으로 열려 code_verifier가 없어 실패하는 케이스 폴백 처리
-      if (error.message.toLowerCase().includes('both auth code and code verifier')) {
-        // PKCE code_verifier가 없어 자동 로그인 불가한 케이스:
-        // 안내 페이지를 거쳐 메인으로 이동하도록 처리
+      // PKCE 관련 모든 실패 케이스는 안내 페이지로 폴백 처리
+      const msg = (error.message || '').toLowerCase();
+      const pkceIndicators = [
+        'both auth code and code verifier',
+        'code challenge',
+        'code_verifier',
+        'invalid verifier',
+        'invalid_verifier',
+        'invalid_grant',
+        'pkce'
+      ];
+      if (pkceIndicators.some((s) => msg.includes(s))) {
         return NextResponse.redirect(`${origin}/auth/email-confirmed?verified=1`);
       }
       return NextResponse.redirect(`${origin}/auth/error?error=${encodeURIComponent(`코드 교환에 실패했습니다: ${error.message}`)}`);
