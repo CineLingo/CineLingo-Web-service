@@ -21,10 +21,9 @@ export async function GET(request: Request) {
       if (userData?.user) {
         const user = userData.user;
         
-        // 구글 OAuth와 이메일 회원가입을 구분
-        const isGoogleOAuth = user.app_metadata?.provider === 'google';
-        const isEmailSignup = user.app_metadata?.provider === 'email' || 
-                             (!user.app_metadata?.provider && user.email_confirmed_at);
+        // 현재 사용자에 구글 ID가 연결되어 있으면 구글 OAuth 흐름으로 간주
+        const hasGoogleIdentity = Array.isArray((user as any).identities) && (user as any).identities.some((i: any) => i?.provider === 'google');
+        const isGoogleOAuth = user.app_metadata?.provider === 'google' || hasGoogleIdentity;
         
         if (isGoogleOAuth) {
           // 구글 OAuth의 경우: user_metadata에서 약관 동의 정보 확인 (3개 약관 모두 확인)
@@ -37,19 +36,10 @@ export async function GET(request: Request) {
             // 약관 동의 정보가 없으면 약관 동의 페이지로 리다이렉트
             return NextResponse.redirect(`${origin}/auth/terms/google`);
           }
-        } else if (isEmailSignup) {
-          // 이메일 회원가입의 경우: 이메일 인증 완료 여부 확인
-          if (user.email_confirmed_at) {
-            // 이메일 인증이 완료된 경우: 이메일 확인 완료 페이지로 이동
-            return NextResponse.redirect(`${origin}/auth/email-confirmed`);
-          } else {
-            // 이메일 인증이 완료되지 않은 경우: 이메일 확인 페이지로 이동
-            return NextResponse.redirect(`${origin}/auth/email-confirmed`);
-          }
-        } else {
-          // 기타 경우 (예: 기존 사용자 로그인)
-          return NextResponse.redirect(`${origin}${next}`);
         }
+
+        // 그 외의 경우(이메일/기타 프로바이더)는 콜백에서는 홈/다음 경로로 이동
+        return NextResponse.redirect(`${origin}${next}`);
       }
     } else {
       console.error('Session exchange error:', error);
