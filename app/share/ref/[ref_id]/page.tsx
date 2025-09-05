@@ -335,7 +335,7 @@ export default function ShareRefPage() {
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">공유된 참조 음성</h1>
             {uploader && (
               <div className="flex items-center gap-2 ml-2">
-                <ProfileAvatar avatarUrl={uploader.avatar_url} alt={uploader.display_name || '업로더'} size={24} />
+                <ProfileAvatar avatarUrl={uploader.avatar_url} alt={uploader.display_name || '업로더'} size={24} fallback="icon" />
                 <span className="text-sm text-gray-600 dark:text-gray-300">{uploader.display_name || '사용자'}</span>
               </div>
             )}

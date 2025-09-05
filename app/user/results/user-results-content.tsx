@@ -737,6 +737,7 @@ export default function UserResultsContent() {
                   avatarUrl={profile?.avatar_url}
                   alt={profile?.display_name || '프로필'}
                   size={20}
+                  fallback="icon"
                 />
                 <div className="text-xs text-gray-500 dark:text-gray-400">
                   {formatDate(row.created_at)}

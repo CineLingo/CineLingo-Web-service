@@ -1198,7 +1198,7 @@ const FileUploadDemo = () => {
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2 sm:space-x-3">
-                            <ProfileAvatar avatarUrl={myProfile?.avatar_url} alt={myProfile?.display_name || '내 프로필'} size={24} />
+                            <ProfileAvatar avatarUrl={myProfile?.avatar_url} alt={myProfile?.display_name || '내 프로필'} size={24} fallback="icon" />
                             <div className="text-left flex-1 min-w-0">
                               <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                                 {voice.ref_file_path.split('/').pop()}
@@ -1252,7 +1252,7 @@ const FileUploadDemo = () => {
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2 sm:space-x-3">
-                            <ProfileAvatar avatarUrl={voice.shared_by_user?.avatar_url} alt={voice.shared_by_user?.display_name || '업로더'} size={24} />
+                            <ProfileAvatar avatarUrl={voice.shared_by_user?.avatar_url} alt={voice.shared_by_user?.display_name || '업로더'} size={24} fallback="icon" />
                             <div className="text-left flex-1 min-w-0">
                               <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                                 {voice.ref_file_path.split('/').pop()}
