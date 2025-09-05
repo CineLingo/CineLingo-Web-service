@@ -176,6 +176,7 @@ export default function UserResultsContent() {
 
     if (error) {
       console.error('Error fetching TTS requests:', error);
+      setLoading(false);
       return;
     }
 
@@ -211,15 +212,14 @@ export default function UserResultsContent() {
       .from('users')
       .select('display_name, avatar_url')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (error) {
-      console.error('Error fetching profile:', error);
-      return;
+      console.warn('Profile fetch warning:', error?.message);
     }
 
     // 프로필 정보가 비어있거나 없는 경우 기본값 설정
-    let profileData = data;
+    let profileData: { display_name: string; avatar_url: string } = data ?? { display_name: '', avatar_url: '' };
     if (!data || (!data.display_name && !data.avatar_url)) {
       // 사용자 메타데이터에서 정보 가져오기
       const { data: { user } } = await supabase.auth.getUser();

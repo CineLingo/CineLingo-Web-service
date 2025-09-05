@@ -508,7 +508,7 @@ const FileUploadDemo = () => {
         user_id: userId,
         ref_file_url: signedUrl,
         ref_file_path: filePath,
-        // is_public은 기본값 true를 사용
+        is_public: true,
       })
       .select('ref_id')
       .single();
