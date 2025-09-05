@@ -74,13 +74,17 @@ export async function POST(request: NextRequest) {
 
     // 2) 4개 public 테이블 upsert (온보딩 로직 인라인)
     // users
+    // 구글 등 OAuth 메타데이터에서 기본 프로필 추출
+    const fullName = (user.user_metadata as { full_name?: string; name?: string } | undefined)?.full_name || (user.user_metadata as { name?: string } | undefined)?.name || ''
+    const googleAvatar = (user.user_metadata as { avatar_url?: string; picture?: string } | undefined)?.avatar_url || (user.user_metadata as { picture?: string } | undefined)?.picture || ''
+
     const { error: usersError } = await supabase
       .from('users')
       .upsert({
         user_id: user.id,
         email: user.email,
-        display_name: '',
-        avatar_url: '',
+        display_name: fullName,
+        avatar_url: googleAvatar,
         auth_provider: true,
         balance: 0,
       }, { onConflict: 'user_id' });

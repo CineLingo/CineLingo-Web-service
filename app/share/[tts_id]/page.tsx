@@ -6,6 +6,7 @@ import { ArrowLeft, Play, Pause, Volume2, Share2 } from 'lucide-react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import ProfileAvatar from '@/components/ProfileAvatar'
 import { NavTheme } from '@/components/nav-theme'
 
 type TTSRequestDetail = {
@@ -39,6 +40,7 @@ export default function SharePage() {
   const [duration, setDuration] = useState(0)
   const audioRef = useRef<HTMLAudioElement>(null)
   const [showShareModal, setShowShareModal] = useState(false)
+  const [uploader, setUploader] = useState<{ display_name?: string; avatar_url?: string } | null>(null)
   const supabase = createClient()
   const params = useParams()
   const ttsId = params.tts_id as string
@@ -119,6 +121,15 @@ export default function SharePage() {
 
         setTtsRequest(processedData as TTSRequestDetail)
         setLoading(false)
+        // 업로더 프로필 조회
+        if (ttsData.user_id) {
+          const { data: userProfile } = await supabase
+            .from('users')
+            .select('display_name, avatar_url')
+            .eq('user_id', ttsData.user_id)
+            .maybeSingle()
+          setUploader(userProfile)
+        }
         
       } catch (error) {
         console.error('Unexpected error in fetchTTSRequest:', error)
@@ -266,6 +277,12 @@ export default function SharePage() {
               <span className="hidden sm:inline">홈</span>
             </Link>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">공유된 TTS 음성</h1>
+            {uploader && (
+              <div className="flex items-center gap-2 ml-2">
+                <ProfileAvatar avatarUrl={uploader.avatar_url} alt={uploader.display_name || '업로더'} size={24} />
+                <span className="text-sm text-gray-600 dark:text-gray-300">{uploader.display_name || '사용자'}</span>
+              </div>
+            )}
           </div>
           <button
             onClick={handleShare}

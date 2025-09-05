@@ -6,6 +6,7 @@ import { ArrowLeft, Share2, Plus, Mic, Play, Pause, Volume2 } from 'lucide-react
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import ProfileAvatar from '@/components/ProfileAvatar'
 import { NavTheme } from '@/components/nav-theme'
 
 type RefAudioDetail = {
@@ -36,6 +37,7 @@ export default function ShareRefPage() {
   const [addSuccess, setAddSuccess] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const audioRef = useRef<HTMLAudioElement>(null)
+  const [uploader, setUploader] = useState<{ display_name?: string; avatar_url?: string } | null>(null)
   
   const supabase = createClient()
   const params = useParams()
@@ -97,6 +99,15 @@ export default function ShareRefPage() {
         }
 
         setRefAudio(refData as RefAudioDetail)
+        // 업로더 프로필 조회
+        if (refData.user_id) {
+          const { data: userProfile } = await supabase
+            .from('users')
+            .select('display_name, avatar_url')
+            .eq('user_id', refData.user_id)
+            .maybeSingle()
+          setUploader(userProfile)
+        }
         setLoading(false)
         
       } catch (error) {
@@ -322,6 +333,12 @@ export default function ShareRefPage() {
               <span className="hidden sm:inline">홈</span>
             </Link>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">공유된 참조 음성</h1>
+            {uploader && (
+              <div className="flex items-center gap-2 ml-2">
+                <ProfileAvatar avatarUrl={uploader.avatar_url} alt={uploader.display_name || '업로더'} size={24} />
+                <span className="text-sm text-gray-600 dark:text-gray-300">{uploader.display_name || '사용자'}</span>
+              </div>
+            )}
           </div>
           {!isPreset && (
             <button

@@ -40,14 +40,18 @@ export async function POST() {
 
     if (!alreadyOnboarded) {
       // 1) users upsert
+      // 구글 OAuth 메타에서 기본 프로필 정보 추출
+      const fullName = (user.user_metadata as { full_name?: string; name?: string } | undefined)?.full_name || (user.user_metadata as { name?: string } | undefined)?.name || '';
+      const googleAvatar = (user.user_metadata as { avatar_url?: string; picture?: string } | undefined)?.avatar_url || (user.user_metadata as { picture?: string } | undefined)?.picture || '';
+
       const { error: usersError } = await supabase
         .from("users")
         .upsert(
           {
             user_id: user.id,
             email,
-            display_name: "",
-            avatar_url: "",
+            display_name: fullName,
+            avatar_url: googleAvatar,
             auth_provider: true,
             balance: 0,
           },

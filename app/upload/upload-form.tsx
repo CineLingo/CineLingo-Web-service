@@ -7,6 +7,7 @@ import { useQueueMonitor } from '@/hooks/use-queue-monitor'
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Play, Pause, Mic, Square, Music, User, Share2, ArrowLeft, AlertTriangle } from 'lucide-react'
+import ProfileAvatar from '@/components/ProfileAvatar'
 import { QueueStatusDisplay } from '@/components/QueueStatusDisplay'
 
 // Supabase Storage list 반환 객체 타입 정의
@@ -118,6 +119,7 @@ const FileUploadDemo = () => {
     ref_file_path: string;
     created_at: string;
   }>>([])
+  const [myProfile, setMyProfile] = useState<{ display_name?: string; avatar_url?: string } | null>(null)
   const [showMyVoices, setShowMyVoices] = useState(false)
   const [selectedMyVoice, setSelectedMyVoice] = useState<{
     ref_id: string;
@@ -135,6 +137,7 @@ const FileUploadDemo = () => {
     shared_by_user?: {
       display_name?: string;
       email: string;
+      avatar_url?: string;
     };
   }>>([])
   const [showSharedVoices, setShowSharedVoices] = useState(false)
@@ -182,6 +185,13 @@ const FileUploadDemo = () => {
       } = await supabase.auth.getUser()
       if (user) {
         setUserId(user.id)
+        // 내 프로필 로드 (아바타 표기를 위해)
+        const { data: p } = await supabase
+          .from('users')
+          .select('display_name, avatar_url')
+          .eq('user_id', user.id)
+          .maybeSingle()
+        setMyProfile(p || null)
       }
       // 로그인하지 않은 사용자는 미들웨어에서 처리되므로 여기서는 아무것도 하지 않음
     }
@@ -587,7 +597,7 @@ const FileUploadDemo = () => {
           
           const { data: userData, error: userError } = await supabase
             .from('users')
-            .select('user_id, display_name, email')
+            .select('user_id, display_name, email, avatar_url')
             .in('user_id', userIds);
           
           if (userError) {
@@ -1188,9 +1198,7 @@ const FileUploadDemo = () => {
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2 sm:space-x-3">
-                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full flex items-center justify-center">
-                              <User size={14} className="sm:w-4 sm:h-4 text-white" />
-                            </div>
+                            <ProfileAvatar avatarUrl={myProfile?.avatar_url} alt={myProfile?.display_name || '내 프로필'} size={24} />
                             <div className="text-left flex-1 min-w-0">
                               <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                                 {voice.ref_file_path.split('/').pop()}
@@ -1244,9 +1252,7 @@ const FileUploadDemo = () => {
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2 sm:space-x-3">
-                            <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-green-400 to-teal-400 rounded-full flex items-center justify-center">
-                              <Share2 size={14} className="sm:w-4 sm:h-4 text-white" />
-                            </div>
+                            <ProfileAvatar avatarUrl={voice.shared_by_user?.avatar_url} alt={voice.shared_by_user?.display_name || '업로더'} size={24} />
                             <div className="text-left flex-1 min-w-0">
                               <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                                 {voice.ref_file_path.split('/').pop()}

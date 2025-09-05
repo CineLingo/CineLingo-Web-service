@@ -10,6 +10,7 @@ import { XCircle, Clock, AlertCircle, Mic, RefreshCw, CheckCircle, Volume2, Down
 import Link from "next/link";
 import { Eye } from "lucide-react";
 import AudioPlayer from "@/components/AudioPlayer";
+import ProfileAvatar from "@/components/ProfileAvatar";
 import ShareRefButton from "@/components/ShareRefButton";
 import FeedbackSheet from "@/components/feedback/FeedbackSheet";
 
@@ -730,9 +731,16 @@ export default function UserResultsContent() {
               key={row.request_id} 
               className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4 transition-all duration-300 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
-              {/* 요청 시간 */}
-              <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                {formatDate(row.created_at)}
+              {/* 업로더 아바타 + 요청 시간 */}
+              <div className="flex items-center gap-2 mb-2">
+                <ProfileAvatar
+                  avatarUrl={profile?.avatar_url}
+                  alt={profile?.display_name || '프로필'}
+                  size={20}
+                />
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  {formatDate(row.created_at)}
+                </div>
               </div>
 
               {/* TTS 뷰 모드 */}
