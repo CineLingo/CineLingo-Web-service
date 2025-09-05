@@ -32,7 +32,11 @@ export function LoginForm() {
       const targetPath = "/";
       window.location.href = targetPath;
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "오류가 발생했습니다");
+      const rawMessage = error instanceof Error ? error.message : "";
+      const translated = rawMessage.toLowerCase().includes("invalid login credentials")
+        ? "이메일 또는 비밀번호가 올바르지 않습니다."
+        : (rawMessage || "오류가 발생했습니다");
+      setError(translated);
     } finally {
       setLoading(false);
     }
