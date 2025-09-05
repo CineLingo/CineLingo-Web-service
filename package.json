@@ -43,6 +43,7 @@
     "tailwindcss": "^3.4.1",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5",
-    "sharp": "^0.33.4"
+    "sharp": "^0.33.4",
+    "to-ico": "^1.1.5"
   }
 }

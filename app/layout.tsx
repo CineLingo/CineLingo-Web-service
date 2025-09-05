@@ -22,8 +22,9 @@ export const metadata: Metadata = {
   publisher: "Cinelingo",
   icons: {
     icon: [
-      { url: "/favicon.ico" },
       { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon.png", sizes: "512x512", type: "image/png" },
+      { url: "/favicon.ico" },
     ],
     apple: [
       { url: "/apple-icon.png", sizes: "180x180", type: "image/png" },
