@@ -666,7 +666,7 @@ const FileUploadDemo = () => {
   }, [userId, fetchMyVoices, fetchSharedVoices])
 
   // 통합된 TTS 시작 함수 - 모든 오디오 소스 처리
-  const startTTS = useCallback(async () => {
+  const startTTS = useCallback(async (options?: { uploadedFilePath?: string }) => {
     if (!userId || !gen_text.trim()) {
       setErrorMessage('계정 정보 또는 텍스트가 없습니다.')
       return
@@ -705,6 +705,9 @@ const FileUploadDemo = () => {
       } else if (selectedPresetAudio) {
         // 프리셋: 스토리지의 preset_audio/<파일>을 직접 사용
         filePath = toPresetStoragePath(selectedPresetAudio)
+      } else if (options?.uploadedFilePath) {
+        // 파일 업로드: useSupabaseUpload onSuccess에서 전달된 스토리지 경로 사용
+        filePath = options.uploadedFilePath
       } else {
         // 파일 업로드가 필요한 경우 - 이는 onUploadSuccess에 의해 처리됨
         setErrorMessage('오디오 파일을 선택해주세요.')
@@ -803,11 +806,11 @@ const FileUploadDemo = () => {
 
   // 파일 업로드 성공 시 호출되는 함수 (기존 구조 유지)
   const onUploadSuccess = useCallback(
-    async (uploadedFileUrls: string[]) => {
-      if (!userId || uploadedFileUrls.length === 0) return
-      
-      // 파일 업로드가 완료되면 startTTS 함수를 호출
-      await startTTS()
+    async (uploadedFilePaths: string[]) => {
+      if (!userId || uploadedFilePaths.length === 0) return
+
+      // 업로드 완료된 스토리지 경로를 startTTS로 전달
+      await startTTS({ uploadedFilePath: uploadedFilePaths[0] })
     },
     [userId, startTTS]
   )
